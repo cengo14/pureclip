@@ -1,6 +1,16 @@
 {
   "name": "pureclip",
   "version": "1.0.0",
+  "description": "Premium macOS Clipboard Manager",
+  "author": "cengodev <https://www.cengodev.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cengo14/pureclip.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cengo14/pureclip/issues"
+  },
+  "homepage": "https://github.com/cengo14/pureclip#readme",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",

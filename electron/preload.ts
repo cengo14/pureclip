@@ -16,4 +16,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAllSettings: () => ipcRenderer.invoke('get-all-settings'),
   updateSetting: (key: string, value: string) => ipcRenderer.invoke('update-setting', key, value),
   openExternal: (url: string) => ipcRenderer.send('open-external', url),
+  quitApp: () => ipcRenderer.send('quit-app')
 })

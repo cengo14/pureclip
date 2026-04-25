@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Pin, Trash2, X, Settings, ArrowLeft, ShieldCheck, Power, AlertCircle, RefreshCcw, Clipboard, Image as ImageIcon, Clock, Hash, Calendar, Volume2, Type } from 'lucide-react'
+import { Search, Pin, Trash2, X, Settings, ArrowLeft, ShieldCheck, Power, AlertCircle, RefreshCcw, Clipboard, Image as ImageIcon, Clock, Hash, Calendar, Volume2, Type, LogOut } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface ClipboardItem {
@@ -27,6 +27,7 @@ declare global {
       getAllSettings: () => Promise<any>
       updateSetting: (key: string, value: string) => Promise<boolean>
       openExternal: (url: string) => void
+      quitApp: () => void
     }
   }
 }
@@ -80,7 +81,7 @@ function App() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <img 
-                src="/pure-clip.png" 
+                src="./pure-clip.png" 
                 alt="PureClip" 
                 style={{ width: '24px', height: '24px' }} 
               />
@@ -376,31 +377,43 @@ function App() {
               <RefreshCcw size={14} className={isCheckingUpdate ? 'spin' : ''} />
               {updateStatus || 'Güncelleştirmeleri Denetle'}
             </button>
+            <button 
+              className="settings-action-button"
+              onClick={() => {
+                if (window.confirm('Uygulamadan tamamen çıkmak istiyor musunuz?')) {
+                  window.electronAPI.quitApp()
+                }
+              }}
+              style={{ border: 'none', background: 'transparent', color: '#ff3b30', borderTop: '0.5px solid var(--border)', borderRadius: 0 }}
+            >
+              <LogOut size={14} />
+              Uygulamadan Tamamen Çık
+            </button>
           </div>
 
             <div className="settings-footer">
-              <div style={{ marginBottom: '24px', fontSize: '13px', color: 'var(--accent)', fontWeight: '600', background: 'var(--accent-glow)', padding: '6px 16px', borderRadius: '20px', display: 'inline-block' }}>
+              <div style={{ marginBottom: '24px', fontSize: '14px', color: 'var(--accent)', fontWeight: '700', background: 'var(--accent-glow)', padding: '8px 20px', borderRadius: '20px', display: 'inline-block', border: '1px solid var(--accent)' }}>
                 Kısayol: ⌘ + ⇧ + V
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <img 
-                  src="/pure-clip.png" 
+                  src="./pure-clip.png" 
                   alt="PureClip" 
-                  style={{ width: '80px', height: '80px', marginBottom: '8px' }} 
+                  style={{ width: '64px', height: '64px', marginBottom: '4px' }} 
                 />
-                <h2 style={{ fontSize: '24px', margin: 0, fontWeight: 700, letterSpacing: '-0.5px' }}>PureClip</h2>
-                <span style={{ fontSize: '12px', opacity: 0.5, fontWeight: 500 }}>Sürüm 1.0.0</span>
+                <h2 style={{ fontSize: '20px', margin: 0, fontWeight: 700, letterSpacing: '-0.4px' }}>PureClip</h2>
+                <span style={{ fontSize: '11px', opacity: 0.5, fontWeight: 500 }}>Sürüm 1.0.0</span>
               </div>
 
-              <div style={{ marginTop: '32px' }}>
+              <div style={{ marginTop: '24px' }}>
                 <p 
                   onClick={() => window.electronAPI.openExternal('https://www.cengodev.com')}
-                  style={{ cursor: 'pointer', color: 'var(--text)', fontWeight: '500', fontSize: '13px' }}
+                  style={{ cursor: 'pointer', color: 'var(--text)', fontWeight: '500', fontSize: '12px' }}
                 >
                   Created by <span style={{ textDecoration: 'underline', color: 'var(--accent)' }}>cengodev</span>
                 </p>
-                <p style={{ opacity: 0.3, marginTop: '4px', fontSize: '11px' }}>Designed for macOS</p>
+                <p style={{ opacity: 0.3, marginTop: '4px', fontSize: '10px' }}>Designed for macOS</p>
               </div>
             </div>
           </div>

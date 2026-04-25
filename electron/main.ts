@@ -27,6 +27,10 @@ process.env.VITE_PUBLIC = VITE_PUBLIC
 let win: BrowserWindow | null
 let tray: Tray | null
 
+ipcMain.on('quit-app', () => {
+  app.quit()
+})
+
 // 📂 Database Setup
 const dbPath = path.join(app.getPath('userData'), 'history.db')
 const db = new Database(dbPath)
@@ -123,8 +127,18 @@ function createTray() {
   tray = new Tray(getTrayIcon())
   tray.setToolTip('PureClip')
   
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'PureClip\'i Göster', click: () => toggleWindow() },
+    { type: 'separator' },
+    { label: 'Uygulamadan Çık', click: () => app.quit() }
+  ])
+
   tray.on('click', () => {
     toggleWindow()
+  })
+
+  tray.on('right-click', () => {
+    tray?.popUpContextMenu(contextMenu)
   })
 }
 
@@ -395,6 +409,9 @@ ipcMain.on('open-external', (_event, url) => {
 })
 
 app.whenReady().then(() => {
+  if (process.platform === 'darwin') {
+    app.dock.hide()
+  }
   createWindow()
   createTray()
   startPolling()
