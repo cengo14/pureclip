@@ -422,7 +422,7 @@ function App() {
                   style={{ width: '64px', height: '64px', marginBottom: '4px' }} 
                 />
                 <h2 style={{ fontSize: '20px', margin: 0, fontWeight: 700, letterSpacing: '-0.4px' }}>PureClip</h2>
-                <span style={{ fontSize: '11px', opacity: 0.5, fontWeight: 500 }}>Sürüm 1.0.2</span>
+                <span style={{ fontSize: '11px', opacity: 0.5, fontWeight: 500 }}>Sürüm 1.0.0</span>
               </div>
 
               <div style={{ marginTop: '24px' }}>
