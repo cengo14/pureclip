@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-electron
+release
+*.local
+.DS_Store
+history.db
+history.db-journal
+out
+build
