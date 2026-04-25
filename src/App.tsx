@@ -366,11 +366,30 @@ function App() {
                 setIsCheckingUpdate(true)
                 setUpdateStatus('Kontrol ediliyor...')
                 
-                setTimeout(() => {
-                  setIsCheckingUpdate(false)
-                  setUpdateStatus('En güncel sürümü kullanıyorsunuz.')
-                  setTimeout(() => setUpdateStatus(null), 3000)
-                }, 2000)
+                try {
+                  const response = await fetch('https://api.github.com/repos/cengo14/pureclip/releases/latest')
+                  if (!response.ok) throw new Error('API hatası')
+                  
+                  const data = await response.json()
+                  const latestVersion = data.tag_name.replace('v', '')
+                  const currentVersion = '1.0.2'
+                  
+                  if (latestVersion !== currentVersion) {
+                    setUpdateStatus(`Yeni Sürüm Mevcut: v${latestVersion}`)
+                    if (window.confirm(`Yeni bir sürüm (v${latestVersion}) bulundu. İndirme sayfasına gitmek ister misiniz?`)) {
+                      window.electronAPI.openExternal(data.html_url)
+                    }
+                  } else {
+                    setUpdateStatus('Uygulama Güncel')
+                  }
+                } catch (error) {
+                  setUpdateStatus('Bağlantı Hatası')
+                } finally {
+                  setTimeout(() => {
+                    setIsCheckingUpdate(false)
+                    setUpdateStatus(null)
+                  }, 3000)
+                }
               }}
               style={{ border: 'none', background: 'transparent' }}
             >
@@ -403,7 +422,7 @@ function App() {
                   style={{ width: '64px', height: '64px', marginBottom: '4px' }} 
                 />
                 <h2 style={{ fontSize: '20px', margin: 0, fontWeight: 700, letterSpacing: '-0.4px' }}>PureClip</h2>
-                <span style={{ fontSize: '11px', opacity: 0.5, fontWeight: 500 }}>Sürüm 1.0.1</span>
+                <span style={{ fontSize: '11px', opacity: 0.5, fontWeight: 500 }}>Sürüm 1.0.2</span>
               </div>
 
               <div style={{ marginTop: '24px' }}>
