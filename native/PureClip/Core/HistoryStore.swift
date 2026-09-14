@@ -11,6 +11,7 @@ final class HistoryStore {
     @ObservationIgnored private let db: Database
     @ObservationIgnored private let monitor = ClipboardMonitor()
     @ObservationIgnored private var cleanupTimer: Timer?
+    @ObservationIgnored private let screenshots = ScreenshotWatcher()
 
     /// Paneli kapatması için AppDelegate'in bağladığı kanca.
     @ObservationIgnored var onRequestHide: (() -> Void)?
@@ -45,6 +46,13 @@ final class HistoryStore {
 
     func start() {
         monitor.start()
+
+        if AppSettings.watchScreenshots {
+            screenshots.onCapture = { [weak self] url in
+                self?.captureScreenshot(at: url)
+            }
+            screenshots.start()
+        }
 
         runCleanup()
         let timer = Timer(timeInterval: 60 * 60, repeats: true) { [weak self] _ in
@@ -88,8 +96,12 @@ final class HistoryStore {
         add(item)
     }
 
-    /// Masaüstünden yakalanan ekran görüntüleri için (ScreenshotWatcher kullanır).
-    func captureImage(at url: URL) {
+    /// Masaüstüne (ya da kullanıcının seçtiği klasöre) düşen ekran görüntüsünü alır.
+    ///
+    /// Electron sürümü yakaladığı dosyayı kullanıcıya sormadan siliyordu. Burada
+    /// silme `deleteScreenshotAfterCapture` ayarına bağlı ve varsayılanı kapalı —
+    /// kullanıcının dosyası izinsiz kaybolmuyor.
+    private func captureScreenshot(at url: URL) {
         guard let saved = images.save(contentsOf: url) else { return }
 
         add(ClipItem(
@@ -101,6 +113,14 @@ final class HistoryStore {
             isPinned: false,
             createdAt: Date()
         ))
+
+        if AppSettings.deleteScreenshotAfterCapture {
+            do {
+                try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+            } catch {
+                NSLog("PureClip: ekran görüntüsü çöpe taşınamadı — \(error.localizedDescription)")
+            }
+        }
     }
 
     private func add(_ item: ClipItem) {
