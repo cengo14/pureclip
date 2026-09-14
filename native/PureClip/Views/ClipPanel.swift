@@ -1,0 +1,51 @@
+import AppKit
+import SwiftUI
+
+/// Odağı çalmadan görünen, kenarlıksız, yuvarlak köşeli panel.
+///
+/// `.nonactivatingPanel` kritik: panel key olabilir (arama alanı yazı alır) ama
+/// uygulama aktive olmaz, yani altta duran uygulama frontmost kalır. Electron
+/// sürümündeki `app.hide()` + 500 ms bekleme hilesi bu sayede gereksizleşiyor.
+final class ClipPanel: NSPanel {
+    var onResignKey: (() -> Void)?
+
+    init(rootView: AnyView) {
+        super.init(
+            contentRect: NSRect(x: 0, y: 0, width: Layout.panelWidth, height: Layout.panelHeight),
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+
+        isFloatingPanel = true
+        level = .floating
+        hidesOnDeactivate = false
+        isMovable = false
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        animationBehavior = .utilityWindow
+
+        let hosting = NSHostingView(rootView: rootView)
+        hosting.wantsLayer = true
+        hosting.layer?.cornerRadius = Layout.cornerRadius
+        hosting.layer?.masksToBounds = true
+        contentView = hosting
+    }
+
+    // Kenarlıksız pencereler varsayılan olarak key olamaz; arama alanının yazı
+    // alabilmesi için buna izin veriyoruz.
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+
+    override func resignKey() {
+        super.resignKey()
+        onResignKey?()
+    }
+
+    // Panel key iken Esc kapatsın.
+    override func cancelOperation(_ sender: Any?) {
+        onResignKey?()
+    }
+}

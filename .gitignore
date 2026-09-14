@@ -8,3 +8,9 @@ history.db
 history.db-journal
 out
 build
+
+# Xcode / native
+native/build
+native/DerivedData
+**/xcuserdata/
+*.xcworkspace/xcuserdata/
