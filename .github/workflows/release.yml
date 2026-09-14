@@ -10,14 +10,15 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
+    # AppIcon.icon (Icon Composer) ve NSGlassEffectView macOS 26 SDK'sı gerektirir.
+    runs-on: macos-26
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_16.app
+      - name: Xcode sürümü
+        run: xcodebuild -version
 
       - name: Build (Release)
         working-directory: native

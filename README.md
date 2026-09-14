@@ -2,7 +2,7 @@
 
 **PureClip**, macOS için özel olarak tasarlanmış, premium ve modern bir pano (clipboard) yöneticisidir. Sadece kopyaladıklarınızı saklamakla kalmaz, aynı zamanda sistem ekran görüntülerini de otomatik olarak organize eder.
 
-![PureClip](native/PureClip/Assets.xcassets/AppIcon.appiconset/icon_512x512%402x.png)
+![PureClip](native/PureClip/Assets.xcassets/Logo.imageset/logo%402x.png)
 
 ## ✨ Özellikler
 
@@ -13,11 +13,14 @@
 - 🎨 **Uyarlanabilir İkon**: Icon Composer katmanlı ikonu sayesinde açık, koyu, şeffaf ve tonlanmış görünümlere sistem tarafından uyarlanır.
 - 📌 **Sabitleme**: Sık kullandığınız öğeleri listenin en başında tutun.
 - 🔍 **Anında Arama**: Geçmişinizde saniyeler içinde arama yapın.
+- 🗂️ **Kategori ve Sıralama**: Tümü / Metin / Görsel sekmeleri ve En Yeni · En Eski · A-Z sıralaması ile yüzlerce kayıt arasında hızlı gezinin.
+- ⚡ **Otomatik Yapıştır**: Seçtiğiniz öğeyi öndeki uygulamaya anında yapıştırır (erişilebilirlik izni gerekir).
 - 🔊 **Sesli Geri Bildirim**: Bir öğe kopyalandığında veya yakalandığında zarif bir sistem sesiyle sizi bilgilendirir.
 
 ## 🛠️ Derleme
 
-Gereksinim: Xcode 16+, macOS 14 (Sonoma) veya üzeri. Harici bağımlılık yok.
+Gereksinim: **Xcode 26+** (Icon Composer ikonu ve `NSGlassEffectView` macOS 26 SDK'sı
+ister), çalışma için macOS 14 (Sonoma) veya üzeri. Harici bağımlılık yok.
 
 ```bash
 git clone https://github.com/cengo14/pureclip.git
@@ -49,7 +52,7 @@ aynı yöntemle (`footprint -p`) ve aynı 24 kayıtlık geçmişle ölçülen de
 | | v1.x (Electron) | v2.0 (Native) |
 |---|---|---|
 | Bellek | 224 MB (4 process) | **22 MB** (tek process) |
-| Uygulama paketi | 274 MB | **5.2 MB** |
+| Uygulama paketi | 274 MB | **3.7 MB** |
 | Geçmiş verisi | 80 MB | **4.5 MB** |
 
 Farkın kaynağı yalnızca Electron'un taban maliyeti değil; resimler artık base64

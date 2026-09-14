@@ -1,16 +1,8 @@
-node_modules
-dist
-dist-electron
-release
-*.local
 .DS_Store
-history.db
-history.db-journal
-out
-build
+*.local
 
-# Xcode / native
-native/build
-native/DerivedData
+# Xcode
+build/
+DerivedData/
 **/xcuserdata/
 *.xcworkspace/xcuserdata/
