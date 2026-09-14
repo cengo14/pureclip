@@ -16,6 +16,9 @@ final class HistoryStore {
     /// Paneli kapatması için AppDelegate'in bağladığı kanca.
     @ObservationIgnored var onRequestHide: (() -> Void)?
 
+    /// İzin dialogunu oturum başına bir kez gösterelim, her tıklamada değil.
+    @ObservationIgnored private var didRequestAccessibility = false
+
     /// Uygulama verisinin kök dizini. Electron sürümünün `history.db` dosyasına
     /// dokunulmaz — native sürüm ayrı bir `clips.db` kullanır, böylece iki sürüm
     /// yan yana çalışabilir.
@@ -192,7 +195,20 @@ final class HistoryStore {
         copyToPasteboard(item)
         onRequestHide?()
 
-        guard AppSettings.autoPaste, Paster.isTrusted else { return }
+        guard AppSettings.autoPaste else { return }
+
+        guard Paster.isTrusted else {
+            // Kullanıcı yapıştırma bekliyor ama izin yok. Ayarlarda düğme aramak
+            // yerine sistemin izin dialogunu tam ihtiyaç duyulduğu anda gösteriyoruz.
+            if !didRequestAccessibility {
+                didRequestAccessibility = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    Paster.requestTrust()
+                }
+            }
+            return
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             Paster.sendCommandV()
         }
