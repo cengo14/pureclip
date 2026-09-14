@@ -17,6 +17,30 @@
 - ⚡ **Otomatik Yapıştır**: Seçtiğiniz öğeyi öndeki uygulamaya anında yapıştırır (erişilebilirlik izni gerekir).
 - 🔊 **Sesli Geri Bildirim**: Bir öğe kopyalandığında veya yakalandığında zarif bir sistem sesiyle sizi bilgilendirir.
 
+## 📥 Kurulum
+
+[Releases](https://github.com/cengo14/pureclip/releases) sayfasından `.dmg` dosyasını
+indirin ve PureClip'i `Applications` klasörüne sürükleyin.
+
+### İlk açılışta "açılamıyor" uyarısı
+
+Uygulama imzasız ve noter onaysız dağıtılıyor (Apple'ın noter onayı ücretli
+geliştirici üyeliği gerektirir). İlk açılışta macOS uyarı verir. İzin vermek için:
+
+**macOS 15 ve üzeri** — Sistem Ayarları → **Gizlilik ve Güvenlik** → sayfayı aşağı
+kaydırın → PureClip'in yanındaki **Yine de Aç**.
+
+**macOS 14** — Uygulamaya Finder'da sağ tıklayıp (veya Control + tık) **Aç**,
+ardından çıkan pencerede yine **Aç**.
+
+Terminal'i tercih ederseniz tek komutla da olur:
+
+```bash
+xattr -d com.apple.quarantine /Applications/PureClip.app
+```
+
+Bu adım yalnızca bir kez gerekir.
+
 ## 🛠️ Derleme
 
 Gereksinim: **Xcode 26+** (Icon Composer ikonu ve `NSGlassEffectView` macOS 26 SDK'sı
