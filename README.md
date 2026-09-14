@@ -9,7 +9,8 @@
 - 🖼️ **Metin ve Resim Desteği**: Kopyaladığınız her şeyi (zengin metinler, kodlar, resimler) anında yakalar.
 - 📸 **Akıllı Ekran Görüntüsü Yönetimi**: `Cmd + Shift + 3/4` ile aldığınız ekran görüntülerini anında PureClip'e ekler. İsterseniz yakalanan dosyayı masaüstünden çöpe taşır (varsayılan olarak kapalı).
 - ⌘ **Hızlı Erişim**: `Cmd + Shift + V` (veya sizin belirlediğiniz) kısayolu ile istediğiniz an karşınıza çıkar.
-- ☁️ **Glassmorphism Tasarım**: macOS estetiğine tamamen uyumlu, şeffaf ve canlı (HUD) arayüz.
+- ☁️ **Native Materyal**: Panel, sistem menülerinin kullandığı cam materyali çıplak kullanır; açık/koyu tema ve macOS 26'daki Liquid Glass işlemesi sistemden gelir.
+- 🎨 **Uyarlanabilir İkon**: Icon Composer katmanlı ikonu sayesinde açık, koyu, şeffaf ve tonlanmış görünümlere sistem tarafından uyarlanır.
 - 📌 **Sabitleme**: Sık kullandığınız öğeleri listenin en başında tutun.
 - 🔍 **Anında Arama**: Geçmişinizde saniyeler içinde arama yapın.
 - 🔊 **Sesli Geri Bildirim**: Bir öğe kopyalandığında veya yakalandığında zarif bir sistem sesiyle sizi bilgilendirir.

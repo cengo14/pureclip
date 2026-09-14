@@ -1,15 +1,13 @@
-// PureClip uygulama ikonunu ve uygulama içi logoyu üretir.
+// PureClip'in uygulama İÇİ logosunu üretir (başlıktaki 24 pt ve ayarlar alt
+// bilgisindeki 64 pt ikon).
 //
-//   swift Tools/MakeIcons.swift
+//   swift Tools/MakeIcons.swift PureClip/Assets.xcassets
 //
-// Çıktı doğrudan Assets.xcassets içine yazılır. İkonu değiştirmek için aşağıdaki
-// tasarımı düzenleyip betiği yeniden çalıştırmak yeterli; PNG'leri elle
-// düzenlemeye gerek yok.
-//
-// Geometri Apple'ın macOS ikon ızgarasına uyar: 1024 tuvalde 824x824 squircle,
-// sürekli (continuous) köşe, yumuşak gölge ve squircle dışında saydam alan.
-// Eski ikonun en büyük kusuru buydu — koyu kare bir zemin PNG'ye gömülüydü,
-// dolayısıyla Dock'ta yuvarlak köşeli değil kare bir blok olarak görünüyordu.
+// NOT: Uygulama ikonunun kendisi artık buradan gelmiyor. macOS 26'nın Liquid Glass
+// sistemine katılabilmesi için ikon `PureClip/AppIcon.icon` paketinde katmanlı
+// olarak duruyor (glif: Tools/make_glyph_svg.py, bileşim: AppIcon.icon/icon.json).
+// Bu betik yalnızca o tasarımın düz, kendi kendine yeten PNG karşılığını üretir —
+// uygulama içinde sistem kompozisyonu devrede olmadığı için gereklidir.
 
 import AppKit
 import SwiftUI
@@ -109,31 +107,9 @@ func render(_ view: some View, pixels: Int) -> Data? {
 
 let assets = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1]
                                                                  : "PureClip/Assets.xcassets")
-let appIconSet = assets.appendingPathComponent("AppIcon.appiconset")
 let logoSet = assets.appendingPathComponent("Logo.imageset")
 
 MainActor.assumeIsolated {
-    var manifest: [[String: String]] = []
-
-    for size in [16, 32, 128, 256, 512] {
-        for scaleFactor in [1, 2] {
-            let pixels = size * scaleFactor
-            let name = "icon_\(size)x\(size)@\(scaleFactor)x.png"
-            guard let data = render(Icon(padded: true), pixels: pixels) else { continue }
-            try? data.write(to: appIconSet.appendingPathComponent(name))
-            manifest.append(["filename": name, "idiom": "mac",
-                             "scale": "\(scaleFactor)x", "size": "\(size)x\(size)"])
-        }
-    }
-
-    let contents: [String: Any] = ["images": manifest,
-                                   "info": ["author": "xcode", "version": 1]]
-    if let data = try? JSONSerialization.data(withJSONObject: contents,
-                                              options: [.prettyPrinted, .sortedKeys]) {
-        try? data.write(to: appIconSet.appendingPathComponent("Contents.json"))
-    }
-    print("AppIcon: \(manifest.count) boyut")
-
     for (name, pixels) in [("logo.png", 256), ("logo@2x.png", 512)] {
         guard let data = render(Icon(padded: false), pixels: pixels) else { continue }
         try? data.write(to: logoSet.appendingPathComponent(name))

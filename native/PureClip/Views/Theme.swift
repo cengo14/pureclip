@@ -16,11 +16,6 @@ enum Theme {
     static let accent = Color(red: 0 / 255, green: 122 / 255, blue: 255 / 255)       // #007AFF
     static let accentGlow = Color(red: 0, green: 122 / 255, blue: 1, opacity: 0.4)
 
-    static let windowTint = dynamic(
-        dark: NSColor(srgbRed: 15 / 255, green: 20 / 255, blue: 45 / 255, alpha: 0.40),
-        light: NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.40)
-    )
-
     static let cardBackground = dynamic(
         dark: NSColor(white: 1.0, alpha: 0.05),
         light: NSColor(white: 0.0, alpha: 0.04)

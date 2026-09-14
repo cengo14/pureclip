@@ -1,22 +1,24 @@
 import AppKit
 import SwiftUI
 
-/// Electron'daki `vibrancy: 'hud'` + `backdrop-filter: blur(40px) saturate(210%)`
-/// görünümünün native karşılığı: sistem HUD materyali üzerine CSS'teki
-/// `linear-gradient(135deg, var(--window-bg), rgba(0,122,255,0.12))` katmanı.
+/// Panelin zemini: sistemin menü materyali, üstüne renk katmadan.
+///
+/// Electron sürümü CSS'te `linear-gradient(135deg, rgba(15,20,45,.4),
+/// rgba(0,122,255,.12))` ile zemini lacivert/maviye boyuyordu ve bu ilk taşımada
+/// birebir korunmuştu. Sonuç, yanındaki native menülerin yanında yabancı duruyordu:
+/// macOS'un cam materyali arkasındaki içeriğin rengini geçirerek çalışır, üstüne
+/// sabit bir renk sermek tam da o uyumu bozar.
+///
+/// Artık `.menu` materyali çıplak kullanılıyor — native menülerin, Spotlight'ın ve
+/// sistem açılır panellerinin kullandığı materyalin aynısı. Açık/koyu tema, şeffaflık
+/// ve macOS 26'daki Liquid Glass işlemesi böylece sistemden geliyor. Renk yalnızca
+/// etkileşimli öğelerde (accent) kalıyor.
 struct GlassBackground: View {
     var body: some View {
-        VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-            .overlay(
-                LinearGradient(
-                    colors: [Theme.windowTint, Theme.accent.opacity(0.12)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+        VisualEffectView(material: .menu, blendingMode: .behindWindow)
             .overlay(
                 RoundedRectangle(cornerRadius: Layout.cornerRadius)
-                    .strokeBorder(Theme.border, lineWidth: 1)
+                    .strokeBorder(Theme.border, lineWidth: 0.5)
             )
             .ignoresSafeArea()
     }
