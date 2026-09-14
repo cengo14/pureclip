@@ -30,10 +30,23 @@ final class ClipPanel: NSPanel {
         animationBehavior = .utilityWindow
 
         let hosting = NSHostingView(rootView: rootView)
-        hosting.wantsLayer = true
-        hosting.layer?.cornerRadius = Layout.cornerRadius
-        hosting.layer?.masksToBounds = true
-        contentView = hosting
+
+        if #available(macOS 26.0, *) {
+            // macOS 26'da camı sistem çiziyor. NSVisualEffectView ile taklit etmek
+            // eski (legacy) menü görünümünü veriyor ve yanındaki gerçek menülerin
+            // yanında mat duruyordu; NSGlassEffectView ise menülerin, Spotlight'ın
+            // ve Denetim Merkezi'nin kullandığı asıl Liquid Glass katmanı.
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = Layout.cornerRadius
+            glass.style = .regular
+            glass.contentView = hosting
+            contentView = glass
+        } else {
+            hosting.wantsLayer = true
+            hosting.layer?.cornerRadius = Layout.cornerRadius
+            hosting.layer?.masksToBounds = true
+            contentView = hosting
+        }
     }
 
     // Kenarlıksız pencereler varsayılan olarak key olamaz; arama alanının yazı

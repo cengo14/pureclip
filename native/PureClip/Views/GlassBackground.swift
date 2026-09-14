@@ -14,13 +14,26 @@ import SwiftUI
 /// ve macOS 26'daki Liquid Glass işlemesi böylece sistemden geliyor. Renk yalnızca
 /// etkileşimli öğelerde (accent) kalıyor.
 struct GlassBackground: View {
+    /// macOS 26'da camı `ClipPanel` içindeki `NSGlassEffectView` sağlıyor; burada
+    /// ikinci bir katman çizmek onu matlaştırır.
+    private var systemDrawsGlass: Bool {
+        if #available(macOS 26.0, *) { return true }
+        return false
+    }
+
     var body: some View {
-        VisualEffectView(material: .menu, blendingMode: .behindWindow)
-            .overlay(
-                RoundedRectangle(cornerRadius: Layout.cornerRadius)
-                    .strokeBorder(Theme.border, lineWidth: 0.5)
-            )
-            .ignoresSafeArea()
+        Group {
+            if systemDrawsGlass {
+                Color.clear
+            } else {
+                VisualEffectView(material: .menu, blendingMode: .behindWindow)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Layout.cornerRadius)
+                            .strokeBorder(Theme.border, lineWidth: 0.5)
+                    )
+            }
+        }
+        .ignoresSafeArea()
     }
 }
 
