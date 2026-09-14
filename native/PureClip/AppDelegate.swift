@@ -5,7 +5,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var panel: ClipPanel!
     private var hotKey: HotKey?
-    private var outsideClickMonitor: Any?
     private var store: HistoryStore!
 
     /// Panel açılmadan hemen önceki öndeki uygulama. Yapıştırmadan önce odağı
@@ -31,6 +30,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setUpPanel()
         store.start()
 
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidResignActive),
+            name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
+
         hotKey = HotKey(keyCode: KeyCode.v, modifiers: KeyModifier.command | KeyModifier.shift) { [weak self] in
             self?.togglePanel()
         }
@@ -44,10 +50,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        if let monitor = outsideClickMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
+    /// Uygulama aktifliğini kaybettiğinde panel kapanır: kullanıcı başka bir
+    /// uygulamaya ya da masaüstüne tıkladı demektir. Panel içindeki onay dialogu
+    /// bu bildirimi tetiklemez — eskiden kullanılan `resignKey` ise tetikliyor,
+    /// dialog görünmeden paneli kapatıyordu.
+    @objc private func applicationDidResignActive() {
+        guard panel?.attachedSheet == nil else { return }
+        hidePanel()
     }
 
     /// Geliştirme kolaylığı: `--appearance dark|light` ile sistem temasından
@@ -106,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpPanel() {
         panel = ClipPanel(rootView: AnyView(RootView(store: store)))
-        panel.onResignKey = { [weak self] in self?.hidePanel() }
+        panel.onDismiss = { [weak self] in self?.hidePanel() }
     }
 
     private func presentFatal(_ error: Error) {
@@ -136,22 +145,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Odak kaybı `previousApp` sayesinde yapıştırma anında telafi ediliyor.
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
-
-        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
-            matching: [.leftMouseDown, .rightMouseDown]
-        ) { [weak self] _ in
-            self?.hidePanel()
-        }
     }
 
     func hidePanel() {
-        guard panel.isVisible else { return }
+        guard panel.isVisible, panel.attachedSheet == nil else { return }
         panel.orderOut(nil)
-
-        if let monitor = outsideClickMonitor {
-            NSEvent.removeMonitor(monitor)
-            outsideClickMonitor = nil
-        }
     }
 
     /// Paneli kapatıp odağı panel açılmadan önceki uygulamaya iade eder.

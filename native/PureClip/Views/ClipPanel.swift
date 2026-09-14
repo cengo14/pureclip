@@ -7,7 +7,9 @@ import SwiftUI
 /// uygulama aktive olmaz, yani altta duran uygulama frontmost kalır. Electron
 /// sürümündeki `app.hide()` + 500 ms bekleme hilesi bu sayede gereksizleşiyor.
 final class ClipPanel: NSPanel {
-    var onResignKey: (() -> Void)?
+    /// Paneli kapatma isteği (Esc). Uygulamanın aktifliğini kaybetmesi ayrı bir
+    /// yoldan, AppDelegate'teki `didResignActiveNotification` ile ele alınıyor.
+    var onDismiss: (() -> Void)?
 
     init(rootView: AnyView) {
         super.init(
@@ -39,13 +41,15 @@ final class ClipPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    override func resignKey() {
-        super.resignKey()
-        onResignKey?()
-    }
+    // NOT: Burada `resignKey`i geçersiz kılıp paneli gizlemek cazip görünüyor ama
+    // yanlış: onay dialogu panele bir sheet olarak açıldığında panel key olmaktan
+    // çıkıyor, dolayısıyla dialog görünmeden panel kapanıyordu. Kapatma sinyali
+    // pencerenin key'liği değil, uygulamanın aktifliği olmalı.
 
-    // Panel key iken Esc kapatsın.
+    /// Esc paneli kapatsın — ama üstte bir onay dialogu varsa Esc önce onu iptal
+    /// etmeli, o yüzden sheet açıkken karışmıyoruz.
     override func cancelOperation(_ sender: Any?) {
-        onResignKey?()
+        guard attachedSheet == nil else { return }
+        onDismiss?()
     }
 }

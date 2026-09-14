@@ -88,23 +88,28 @@ struct ClipRowView: View {
         .padding(.top, 10)
     }
 
+    /// CSS'te bu düğmeler `opacity: 0` ile başlayıp `.item-card:hover` ile
+    /// görünür oluyor. Aynı görsel davranış korunuyor, ancak saydamlık düğmenin
+    /// tamamına değil içeriğine uygulanıyor: sabitlenmiş öğelerde pin düğmesi
+    /// hover olmadan da görünür kalıyor ve her iki düğme de erişilebilirlik
+    /// ağacında duruyor.
     private var actions: some View {
         HStack(spacing: 8) {
             IconButton(systemName: "pin.fill",
+                       revealed: isHovering || item.isPinned,
                        tint: item.isPinned ? Theme.pin : Theme.text,
                        rotation: item.isPinned ? 0 : -45,
                        help: item.isPinned ? "Sabitlemeyi Kaldır" : "Sabitle",
                        action: onTogglePin)
 
             IconButton(systemName: "trash",
+                       revealed: isHovering,
                        tint: Theme.text,
                        hoverTint: Theme.destructive,
                        help: "Sil",
                        action: onDelete)
         }
         .padding(10)
-        .opacity(isHovering ? 1 : 0)
-        .animation(.easeOut(duration: 0.2), value: isHovering)
     }
 
     @ViewBuilder
@@ -132,6 +137,10 @@ struct IconButton: View {
 
     let systemName: String
     var style: Style = .filled
+    /// Görsel olarak görünür mü. `false` iken düğme saydam çizilir ama yerleşimde
+    /// ve erişilebilirlik ağacında kalır — `.opacity(0)`'ı düğmenin tamamına
+    /// uygulamak onu VoiceOver'dan da gizliyordu.
+    var revealed = true
     var tint: Color = Theme.textSecondary
     var hoverTint: Color?
     var rotation: Double = 0
@@ -159,10 +168,13 @@ struct IconButton: View {
                 .foregroundStyle(isHovering ? (hoverTint ?? tint) : tint)
                 .padding(padding)
                 .background(background, in: RoundedRectangle(cornerRadius: cornerRadius))
+                .opacity(revealed ? 1 : 0)
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
         .help(help)
+        .accessibilityLabel(help)
         .animation(.easeOut(duration: 0.2), value: isHovering)
+        .animation(.easeOut(duration: 0.2), value: revealed)
     }
 }
