@@ -112,6 +112,15 @@ final class ClipPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
+    /// AppKit pencereleri menü çubuğunun altında kalacak şekilde kısıtlar. Gölge
+    /// payı eklendikten sonra pencerenin üst kenarı menü çubuğu hizasına taşıyor
+    /// ve bu kısıtlama paneli pay kadar aşağı itiyordu — panel menü çubuğundan
+    /// kopuk görünüyordu. Konumu `positionPanel` zaten ekran sınırlarına göre
+    /// hesaplıyor, kısıtlamaya gerek yok.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
+
     // NOT: Burada `resignKey`i geçersiz kılıp paneli gizlemek cazip görünüyor ama
     // yanlış: onay dialogu panele bir sheet olarak açıldığında panel key olmaktan
     // çıkıyor, dolayısıyla dialog görünmeden panel kapanıyordu. Kapatma sinyali
