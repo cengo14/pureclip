@@ -1,21 +1,27 @@
 import SwiftUI
 
 struct RootView: View {
+    let store: HistoryStore
+
     var body: some View {
         ZStack {
             GlassBackground()
 
-            VStack(spacing: 8) {
-                Image(systemName: "list.clipboard")
-                    .font(.system(size: 44, weight: .light))
+            // Faz 2 geçici görünümü — Faz 3'te gerçek liste gelecek.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(store.items.count) kayıt")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Theme.textSecondary)
-                Text("PureClip")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Theme.text)
-                Text("Faz 1 — panel çalışıyor")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textSecondary)
+
+                ForEach(store.items.prefix(12)) { item in
+                    Text(item.kind == .text ? item.previewText : "🖼 \(item.imageFile ?? "")")
+                        .font(.system(size: 11))
+                        .lineLimit(1)
+                        .foregroundStyle(Theme.text)
+                }
+                Spacer()
             }
+            .padding(Layout.horizontalPadding)
         }
         .frame(width: Layout.panelWidth, height: Layout.panelHeight)
     }

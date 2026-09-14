@@ -6,10 +6,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: ClipPanel!
     private var hotKey: HotKey?
     private var outsideClickMonitor: Any?
+    private var store: HistoryStore!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppSettings.registerDefaults()
+
+        do {
+            store = try HistoryStore()
+        } catch {
+            presentFatal(error)
+            return
+        }
+
         setUpStatusItem()
         setUpPanel()
+        store.start()
 
         hotKey = HotKey(keyCode: KeyCode.v, modifiers: KeyModifier.command | KeyModifier.shift) { [weak self] in
             self?.togglePanel()
@@ -62,8 +73,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Panel
 
     private func setUpPanel() {
-        panel = ClipPanel(rootView: AnyView(RootView()))
+        panel = ClipPanel(rootView: AnyView(RootView(store: store)))
         panel.onResignKey = { [weak self] in self?.hidePanel() }
+    }
+
+    private func presentFatal(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = "PureClip başlatılamadı"
+        alert.informativeText = error.localizedDescription
+        alert.runModal()
+        NSApp.terminate(nil)
     }
 
     @objc func togglePanel() {
