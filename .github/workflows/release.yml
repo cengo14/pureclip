@@ -1,0 +1,62 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode_16.app
+
+      - name: Build (Release)
+        working-directory: native
+        run: |
+          xcodebuild \
+            -project PureClip.xcodeproj \
+            -scheme PureClip \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package DMG
+        working-directory: native
+        run: |
+          APP="build/Build/Products/Release/PureClip.app"
+          test -d "$APP" || { echo "PureClip.app bulunamadı"; exit 1; }
+
+          mkdir -p dmg
+          cp -R "$APP" dmg/
+          ln -s /Applications dmg/Applications
+
+          hdiutil create -volname PureClip \
+            -srcfolder dmg \
+            -ov -format UDZO \
+            "PureClip-${GITHUB_REF_NAME}.dmg"
+
+          ditto -c -k --keepParent "$APP" "PureClip-${GITHUB_REF_NAME}.zip"
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            native/PureClip-*.dmg
+            native/PureClip-*.zip
+          body: |
+            PureClip ${{ github.ref_name }}
+
+            > Bu derleme imzasız ve noter onaysızdır. İlk açılışta macOS uyarı
+            > verirse uygulamaya sağ tıklayıp **Aç**'ı seçin.

@@ -50,6 +50,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        store?.shutdown()
+    }
+
     /// Uygulama aktifliğini kaybettiğinde panel kapanır: kullanıcı başka bir
     /// uygulamaya ya da masaüstüne tıkladı demektir. Panel içindeki onay dialogu
     /// bu bildirimi tetiklemez — eskiden kullanılan `resignKey` ise tetikliyor,

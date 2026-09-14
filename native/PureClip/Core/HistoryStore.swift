@@ -63,6 +63,14 @@ final class HistoryStore {
         cleanupTimer = timer
     }
 
+    /// Uygulama kapanırken: izleyicileri durdur, WAL'ı ana dosyaya aktar.
+    func shutdown() {
+        monitor.stop()
+        screenshots.stop()
+        cleanupTimer?.invalidate()
+        db.checkpoint()
+    }
+
     // MARK: - Yakalama
 
     private func capture(_ payload: ClipboardMonitor.Payload) {

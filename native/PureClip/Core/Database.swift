@@ -207,6 +207,13 @@ final class Database {
         try? exec("VACUUM;")
     }
 
+    /// WAL dosyasındaki kaydedilmiş sayfaları ana veritabanına aktarıp WAL'ı
+    /// kısaltır. Uygulama kapanırken çağrılıyor ki diskte yüzlerce KB'lık bir
+    /// yardımcı dosya asılı kalmasın.
+    func checkpoint() {
+        sqlite3_wal_checkpoint_v2(db, nil, SQLITE_CHECKPOINT_TRUNCATE, nil, nil)
+    }
+
     // MARK: - Yardımcılar
 
     private func run(_ sql: String, bind: ((OpaquePointer?) -> Void)? = nil) {
