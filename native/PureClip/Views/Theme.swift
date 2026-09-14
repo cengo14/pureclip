@@ -53,6 +53,16 @@ enum Theme {
 
     static let destructive = Color(red: 1.0, green: 0x3B / 255, blue: 0x30 / 255) // #ff3b30
 
+    /// Sabitlenmiş kart: .item-card.pinned
+    static let pin = Color(red: 1.0, green: 0x95 / 255, blue: 0) // #ff9500
+    static let pinnedFill = LinearGradient(
+        colors: [Color(red: 1.0, green: 0x95 / 255, blue: 0, opacity: 0.10),
+                 Color(red: 1.0, green: 0x95 / 255, blue: 0, opacity: 0.05)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    static let pinnedBorder = Color(red: 1.0, green: 0x95 / 255, blue: 0, opacity: 0.30)
+
     private static func dynamic(dark: NSColor, light: NSColor) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light

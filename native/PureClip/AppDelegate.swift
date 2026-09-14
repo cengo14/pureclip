@@ -8,8 +8,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var outsideClickMonitor: Any?
     private var store: HistoryStore!
 
+    /// Panel açılmadan hemen önceki öndeki uygulama. Yapıştırmadan önce odağı
+    /// buna geri veriyoruz — Electron sürümü `app.hide()` deyip 500 ms bekleyerek
+    /// "herhalde eski uygulama öne gelmiştir" varsayımıyla çalışıyordu; burada
+    /// hedef uygulama kesin olarak biliniyor.
+    private var previousApp: NSRunningApplication?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppSettings.registerDefaults()
+        applyDevelopmentAppearanceOverride()
 
         do {
             store = try HistoryStore()
@@ -18,12 +25,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        store.onRequestHide = { [weak self] in self?.hideAndRestoreFocus() }
+
         setUpStatusItem()
         setUpPanel()
         store.start()
 
         hotKey = HotKey(keyCode: KeyCode.v, modifiers: KeyModifier.command | KeyModifier.shift) { [weak self] in
             self?.togglePanel()
+        }
+
+        // Geliştirme kolaylığı: paneli açık başlat (görsel doğrulama / ekran görüntüsü).
+        // Menü çubuğu öğesi konumlanana kadar bekle, yoksa panel ekran dışına düşer.
+        if CommandLine.arguments.contains("--show-panel") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                self?.togglePanel()
+            }
         }
     }
 
@@ -33,14 +50,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Geliştirme kolaylığı: `--appearance dark|light` ile sistem temasından
+    /// bağımsız olarak iki görünümü de test edebilmek için.
+    private func applyDevelopmentAppearanceOverride() {
+        let arguments = CommandLine.arguments
+        guard let index = arguments.firstIndex(of: "--appearance"),
+              index + 1 < arguments.count else { return }
+
+        switch arguments[index + 1] {
+        case "dark":  NSApp.appearance = NSAppearance(named: .darkAqua)
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        default:      break
+        }
+    }
+
     // MARK: - Menü çubuğu
 
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         guard let button = statusItem.button else { return }
-        button.image = NSImage(systemSymbolName: "list.clipboard",
-                               accessibilityDescription: "PureClip")
+        button.image = NSImage(named: "MenuBarIcon")
+            ?? NSImage(systemSymbolName: "list.clipboard", accessibilityDescription: "PureClip")
+        button.image?.size = NSSize(width: 18, height: 18)
         button.image?.isTemplate = true
         button.toolTip = "PureClip"
         button.target = self
@@ -91,11 +123,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showPanel() {
+        // Hangi uygulamaya geri döneceğimizi paneli göstermeden önce not al.
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        if frontmost?.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            previousApp = frontmost
+        }
+
         positionPanel()
-        panel.orderFrontRegardless()
-        // .nonactivatingPanel sayesinde uygulama aktive olmaz — alttaki uygulama
-        // "frontmost" kalır, böylece yapıştırma doğrudan oraya gider.
-        panel.makeKey()
+
+        // Arama alanının klavye girişi alabilmesi için uygulamanın öne gelmesi
+        // gerekiyor: macOS klavye olaylarını yalnızca aktif uygulamaya yönlendirir.
+        // Odak kaybı `previousApp` sayesinde yapıştırma anında telafi ediliyor.
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
 
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
@@ -114,20 +154,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Paneli kapatıp odağı panel açılmadan önceki uygulamaya iade eder.
+    /// Yapıştırma bunun hemen ardından gidiyor.
+    private func hideAndRestoreFocus() {
+        hidePanel()
+
+        if let previousApp, !previousApp.isTerminated {
+            previousApp.activate()
+        } else {
+            NSApp.hide(nil)
+        }
+        previousApp = nil
+    }
+
     /// Paneli menü çubuğu ikonunun altına, yatayda ortalayarak konumlandırır.
     private func positionPanel() {
         guard let button = statusItem.button,
               let buttonWindow = button.window,
               let screen = buttonWindow.screen ?? NSScreen.main else { return }
 
-        let buttonRect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
-        let size = panel.frame.size
-
-        var x = buttonRect.midX - size.width / 2
-        let y = buttonRect.minY - size.height - 6
-
-        // Ekranın dışına taşmasın
         let visible = screen.visibleFrame
+        let size = panel.frame.size
+        let buttonRect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+
+        // Menü çubuğu öğesi henüz yerleşmediyse (uygulama yeni açıldıysa) buton
+        // dikdörtgeni sıfıra yakın gelir ve panel ekranın altına düşer. Böyle bir
+        // durumda menü çubuğunun sağ ucuna yaslıyoruz.
+        let isButtonPlaced = buttonRect.minY > visible.minY + size.height
+
+        var x = isButtonPlaced ? buttonRect.midX - size.width / 2 : visible.maxX - size.width - 8
+        let y = isButtonPlaced ? buttonRect.minY - size.height - 6 : visible.maxY - size.height - 6
+
         x = min(max(x, visible.minX + 8), visible.maxX - size.width - 8)
 
         panel.setFrameOrigin(NSPoint(x: x, y: y))

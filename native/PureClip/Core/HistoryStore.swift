@@ -12,6 +12,9 @@ final class HistoryStore {
     @ObservationIgnored private let monitor = ClipboardMonitor()
     @ObservationIgnored private var cleanupTimer: Timer?
 
+    /// Paneli kapatması için AppDelegate'in bağladığı kanca.
+    @ObservationIgnored var onRequestHide: (() -> Void)?
+
     /// Uygulama verisinin kök dizini. Electron sürümünün `history.db` dosyasına
     /// dokunulmaz — native sürüm ayrı bir `clips.db` kullanır, böylece iki sürüm
     /// yan yana çalışabilir.
@@ -149,6 +152,22 @@ final class HistoryStore {
 
         monitor.acknowledgeSelfWrite()
         if AppSettings.soundEnabled { Sound.captured.play() }
+    }
+
+    /// Kullanıcı bir öğeye tıkladığında: panoya yaz, paneli kapat, öndeki uygulamaya
+    /// ⌘V gönder.
+    ///
+    /// `onRequestHide` paneli kapatıp odağı panel açılmadan önceki uygulamaya
+    /// iade eder; ⌘V o uygulama öne geldikten sonra gönderilir. Electron sürümü
+    /// hedefi bilmediği için `app.hide()` deyip 500 ms tahminî bekliyordu.
+    func paste(_ item: ClipItem) {
+        copyToPasteboard(item)
+        onRequestHide?()
+
+        guard AppSettings.autoPaste, Paster.isTrusted else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            Paster.sendCommandV()
+        }
     }
 
     // MARK: - Bakım
