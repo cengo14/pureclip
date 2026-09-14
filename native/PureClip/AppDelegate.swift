@@ -94,9 +94,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func statusItemClicked() {
-        guard let event = NSApp.currentEvent else { return }
-
-        if event.type == .rightMouseUp {
+        // Olay yoksa (ör. erişilebilirlik API'si üzerinden tetiklendiğinde) sol
+        // tık varsayılıyor; eskiden burada erken dönülüyor ve tıklama sessizce
+        // yutuluyordu.
+        if NSApp.currentEvent?.type == .rightMouseUp {
             showContextMenu()
         } else {
             togglePanel()
