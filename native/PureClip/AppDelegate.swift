@@ -177,7 +177,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let screen = buttonWindow.screen ?? NSScreen.main else { return }
 
         let visible = screen.visibleFrame
-        let size = panel.frame.size
+        // Pencere, gölgeye yer açmak için görünen panelden dört yanda
+        // `shadowMargin` kadar büyük. Konum hesabı görünen kısma göre yapılıp
+        // pencere başlangıcı o kadar geri kaydırılıyor.
+        let size = ClipPanel.visibleSize
+        let margin = ClipPanel.shadowMargin
         let buttonRect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
 
         // Menü çubuğu öğesi henüz yerleşmediyse (uygulama yeni açıldıysa) buton
@@ -190,6 +194,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         x = min(max(x, visible.minX + 8), visible.maxX - size.width - 8)
 
-        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        panel.setFrameOrigin(NSPoint(x: x - margin, y: y - margin))
     }
 }

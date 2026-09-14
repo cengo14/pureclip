@@ -5,8 +5,10 @@ import SwiftUI
 enum Layout {
     static let panelWidth: CGFloat = 350
     static let panelHeight: CGFloat = 500
-    static let cornerRadius: CGFloat = 14
-    static let cardCornerRadius: CGFloat = 10
+    /// macOS 26'daki menü ve panellerin yuvarlaklığına yakın. Electron sürümü
+    /// CSS'ten gelen 14 px'i kullanıyordu, sistem panellerinin yanında köşeli duruyordu.
+    static let cornerRadius: CGFloat = 20
+    static let cardCornerRadius: CGFloat = 12
     static let horizontalPadding: CGFloat = 12
 }
 
