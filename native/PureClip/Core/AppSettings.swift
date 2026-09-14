@@ -11,6 +11,7 @@ enum SettingsKey {
     static let autoPaste = "autoPaste"
     static let watchScreenshots = "watchScreenshots"
     static let deleteScreenshotAfterCapture = "deleteScreenshotAfterCapture"
+    static let sortOrder = "sortOrder"
 }
 
 enum AppSettings {

@@ -4,17 +4,40 @@ struct RootView: View {
     let store: HistoryStore
 
     @State private var searchQuery = ""
+    @State private var filter: ClipFilter = .all
+    /// Sıralama tercihi oturumlar arası korunuyor.
+    @AppStorage(SettingsKey.sortOrder) private var sort: ClipSort = .newest
     @State private var showingSettings = false
     @State private var pendingDeletion: ClipItem?
     @State private var confirmingClearAll = false
 
     @FocusState private var searchFocused: Bool
 
-    private var filteredItems: [ClipItem] {
-        guard !searchQuery.isEmpty else { return store.items }
-        return store.items.filter { item in
-            // Resimler aramada elenmiyor (Electron sürümüyle aynı davranış).
-            item.kind == .image || item.previewText.localizedCaseInsensitiveContains(searchQuery)
+    /// Kategori -> toplam sayı. Arama sonucundan değil tüm geçmişten hesaplanıyor
+    /// ki sekmedeki rakam arama yaparken oynamasın.
+    private var counts: [ClipFilter: Int] {
+        var result: [ClipFilter: Int] = [:]
+        for option in ClipFilter.allCases {
+            result[option] = store.items.filter(option.matches).count
+        }
+        return result
+    }
+
+    private var visibleItems: [ClipItem] {
+        var items = store.items.filter(filter.matches)
+
+        if !searchQuery.isEmpty {
+            // Resimlerin aranabilir metni yok; sorgu varken eleniyorlar.
+            items = items.filter {
+                $0.kind == .text && $0.previewText.localizedCaseInsensitiveContains(searchQuery)
+            }
+        }
+
+        // Sabitlenmiş öğeler seçilen ölçütten bağımsız olarak hep en üstte.
+        return items.sorted { lhs, rhs in
+            lhs.isPinned == rhs.isPinned
+                ? sort.isOrderedBefore(lhs, rhs)
+                : lhs.isPinned
         }
     }
 
@@ -104,12 +127,16 @@ struct RootView: View {
 
     private var historyContent: some View {
         VStack(spacing: 0) {
-            SearchField(text: $searchQuery)
-                .focused($searchFocused)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+            VStack(spacing: 10) {
+                SearchField(text: $searchQuery)
+                    .focused($searchFocused)
 
-            if filteredItems.isEmpty {
+                FilterBar(filter: $filter, sort: $sort, counts: counts)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            if visibleItems.isEmpty {
                 emptyState
             } else {
                 list
@@ -121,7 +148,7 @@ struct RootView: View {
     private var list: some View {
         ScrollView(.vertical) {
             LazyVStack(spacing: 12) {
-                ForEach(filteredItems) { item in
+                ForEach(visibleItems) { item in
                     ClipRowView(
                         item: item,
                         thumbnail: item.imageFile.flatMap { store.images.thumbnail(named: $0) },
@@ -135,21 +162,43 @@ struct RootView: View {
             .padding(.bottom, 16)
         }
         .scrollIndicators(.never)
-        .animation(.easeOut(duration: 0.25), value: filteredItems)
+        .animation(.easeOut(duration: 0.25), value: visibleItems)
+        .animation(.easeOut(duration: 0.25), value: filter)
     }
 
     private var emptyState: some View {
         VStack(spacing: 12) {
             Spacer()
-            Image(systemName: "doc.on.clipboard")
+            Image(systemName: emptyStateIcon)
                 .font(.system(size: 48, weight: .ultraLight))
                 .foregroundStyle(Theme.text.opacity(0.3))
-            Text(searchQuery.isEmpty ? "Geçmiş henüz boş" : "Sonuç bulunamadı")
+            Text(emptyStateMessage)
                 .font(.system(size: 13))
+                .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, 32)
             Spacer()
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var emptyStateIcon: String {
+        if !searchQuery.isEmpty { return "magnifyingglass" }
+        return filter == .all ? "doc.on.clipboard" : filter.icon
+    }
+
+    private var emptyStateMessage: String {
+        if !searchQuery.isEmpty {
+            return filter == .image
+                ? "Görseller metin içermediği için aramada eşleşmez"
+                : "Sonuç bulunamadı"
+        }
+
+        switch filter {
+        case .all:   return "Geçmiş henüz boş"
+        case .text:  return "Henüz metin kopyalanmadı"
+        case .image: return "Henüz görsel kopyalanmadı"
+        }
     }
 }
 
