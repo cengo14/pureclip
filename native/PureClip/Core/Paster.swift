@@ -14,6 +14,15 @@ enum Paster {
         AXIsProcessTrusted()
     }
 
+    /// macOS'un kendi izin dialogunu gösterir. Kullanıcıyı Sistem Ayarları'na
+    /// yollamaktan daha iyi: dialog uygulamayı erişilebilirlik listesine kendisi
+    /// ekler, kullanıcının listeden elle bulup sürüklemesi gerekmez.
+    @discardableResult
+    static func requestTrust() -> Bool {
+        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+        return AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+    }
+
     static func openAccessibilitySettings() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
         NSWorkspace.shared.open(url)

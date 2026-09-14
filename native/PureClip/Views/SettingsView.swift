@@ -50,6 +50,12 @@ struct SettingsView: View {
             isAccessible = Paster.isTrusted
             launchAtLogin = LaunchAtLogin.isEnabled
         }
+        // İzin verildiği anda rozet kendiliğinden güncellensin: kullanıcı Sistem
+        // Ayarları'ndan dönünce paneli kapatıp açmak zorunda kalmasın.
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            guard !isAccessible else { return }
+            isAccessible = Paster.isTrusted
+        }
         .confirmationDialog("Uygulamadan tamamen çıkmak istiyor musunuz?",
                             isPresented: $confirmingQuit, titleVisibility: .visible) {
             Button("Çık", role: .destructive) { NSApp.terminate(nil) }
@@ -152,8 +158,13 @@ struct SettingsView: View {
 
             if !isAccessible {
                 Divider().overlay(Theme.border)
-                SettingsButton(icon: "exclamationmark.circle", title: "Sistem Ayarlarını Aç") {
-                    Paster.openAccessibilitySettings()
+                SettingsButton(icon: "exclamationmark.circle", title: "İzin Ver") {
+                    // Önce sistemin kendi dialogu — uygulamayı listeye o ekler.
+                    // Dialog daha önce reddedildiyse tekrar görünmez, o yüzden
+                    // Sistem Ayarları'nı da açıyoruz.
+                    if !Paster.requestTrust() {
+                        Paster.openAccessibilitySettings()
+                    }
                 }
             }
         }
