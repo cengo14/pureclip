@@ -2,7 +2,7 @@
 
 **PureClip**, macOS için özel olarak tasarlanmış, premium ve modern bir pano (clipboard) yöneticisidir. Sadece kopyaladıklarınızı saklamakla kalmaz, aynı zamanda sistem ekran görüntülerini de otomatik olarak organize eder.
 
-![PureClip Logo](public/pure-clip.png)
+![PureClip](native/PureClip/Assets.xcassets/AppIcon.appiconset/icon_512x512%402x.png)
 
 ## ✨ Özellikler
 
