@@ -89,6 +89,7 @@ final class HistoryStore {
                 hash: Self.hash(of: Data(text.utf8)),
                 isPinned: false,
                 pinnedAt: nil,
+                slot: nil,
                 createdAt: Date()
             )
 
@@ -102,6 +103,7 @@ final class HistoryStore {
                 hash: saved.hash,
                 isPinned: false,
                 pinnedAt: nil,
+                slot: nil,
                 createdAt: Date()
             )
         }
@@ -125,6 +127,7 @@ final class HistoryStore {
             hash: saved.hash,
             isPinned: false,
             pinnedAt: nil,
+            slot: nil,
             createdAt: Date()
         ))
 
@@ -148,24 +151,23 @@ final class HistoryStore {
         reload()
     }
 
-    /// Kısayol slotlarına (⌘⇧1-5) karşılık gelen sabitlenmiş öğeler.
-    ///
-    /// Sıralama sabitlenme zamanına göre; paneldeki görünüm sırasından bağımsız.
-    /// Kullanıcı listeyi A-Z sıralarsa ekrandaki dizilim değişir ama slotlar
-    /// yerinde kalır — kısayolun tek anlamı kas hafızası olduğu için bu şart.
-    var pinnedSlots: [ClipItem] {
-        items
-            .filter(\.isPinned)
-            .sorted { ($0.pinnedAt ?? $0.createdAt) < ($1.pinnedAt ?? $1.createdAt) }
-            .prefix(HistoryStore.slotCount)
-            .map { $0 }
+    /// Kısayol atanabilecek slot numaraları.
+    static let slots = 1...5
+
+    /// Verilen slota atanmış öğe. Kısayol basıldığında bu çözümleniyor.
+    func item(inSlot slot: Int) -> ClipItem? {
+        items.first { $0.slot == slot && $0.isPinned }
     }
 
-    static let slotCount = 5
+    /// Kullanıcı bir slotu bir öğeye atar. Slot başkasındaysa ondan alınır.
+    func assign(slot: Int, to item: ClipItem) {
+        db.assignSlot(slot, to: item.id)
+        reload()
+    }
 
-    /// Verilen öğenin slot numarası (1 tabanlı), yoksa nil.
-    func slot(of item: ClipItem) -> Int? {
-        pinnedSlots.firstIndex(where: { $0.id == item.id }).map { $0 + 1 }
+    func clearSlot(of item: ClipItem) {
+        db.clearSlot(id: item.id)
+        reload()
     }
 
     // MARK: - Kullanıcı eylemleri

@@ -80,10 +80,39 @@ struct RootView: View {
         }
     }
 
-    /// Sabitlenmiş öğenin kısayol etiketi. Özellik kapalıysa rozet gösterilmiyor.
+    /// Atanmış kısayolun rozet metni. Özellik kapalıysa rozet gösterilmiyor.
     private func shortcutLabel(for item: ClipItem) -> String? {
-        guard pinnedShortcutsEnabled, let slot = store.slot(of: item) else { return nil }
-        return AppSettings.pinnedShortcutModifier.label(slot: slot)
+        guard pinnedShortcutsEnabled, let slot = item.slot else { return nil }
+        return shortcutModifier.label(slot: slot)
+    }
+
+    /// Kısayol atama menüsü yalnızca sabitlenmiş öğelerde görünüyor: sabitlenmemiş
+    /// bir öğe geçmiş sınırına takılıp silinebilir, kısayolu da onunla kaybolurdu.
+    private func slotMenu(for item: ClipItem) -> SlotMenu? {
+        guard pinnedShortcutsEnabled, item.isPinned else { return nil }
+
+        return SlotMenu(
+            current: item.slot,
+            label: { shortcutModifier.label(slot: $0) },
+            occupant: { slot in
+                guard let other = store.item(inSlot: slot), other.id != item.id else { return nil }
+                return Self.shortDescription(of: other)
+            },
+            assign: { store.assign(slot: $0, to: item) },
+            clear: { store.clearSlot(of: item) }
+        )
+    }
+
+    /// Menüde "bu slot şu an nerede" bilgisini vermek için kısa bir özet.
+    private static func shortDescription(of item: ClipItem) -> String {
+        switch item.kind {
+        case .image:
+            return "görsel"
+        case .text:
+            let trimmed = item.previewText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let firstLine = trimmed.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? trimmed
+            return firstLine.count > 22 ? String(firstLine.prefix(22)) + "…" : firstLine
+        }
     }
 
     // MARK: - Başlık
@@ -161,6 +190,7 @@ struct RootView: View {
                         item: item,
                         thumbnail: item.imageFile.flatMap { store.images.thumbnail(named: $0) },
                         shortcut: shortcutLabel(for: item),
+                        slotMenu: slotMenu(for: item),
                         onCopy: { store.paste(item) },
                         onTogglePin: { store.togglePin(item) },
                         onDelete: { pendingDeletion = item }

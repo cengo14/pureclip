@@ -115,13 +115,13 @@ struct SettingsView: View {
 
     private var shortcutSection: some View {
         SettingsSection {
-            SettingsRow(icon: "pin", title: "Sabitlenmiş Öğe Kısayolları",
-                        description: "İlk 5 sabitlenmiş öğeyi tuşla yapıştır") {
+            SettingsRow(icon: "keyboard", title: "Kısayol Atama",
+                        description: "Sabitlenmiş öğelere 1-5 arası kısayol ver") {
                 switchToggle($pinnedShortcutsEnabled)
             }
 
             if pinnedShortcutsEnabled {
-                SettingsRow(icon: "keyboard", title: "Değiştirici",
+                SettingsRow(icon: "command", title: "Değiştirici",
                             description: "Başka bir uygulamayla çakışırsa değiştirin") {
                     Picker("", selection: $shortcutModifier) {
                         ForEach(PinnedShortcutModifier.allCases) { option in

@@ -5,9 +5,11 @@ import SwiftUI
 struct ClipRowView: View {
     let item: ClipItem
     let thumbnail: NSImage?
-    /// Sabitlenmiş öğenin kısayolu, ör. "⌘⇧1". Slot yoksa (5'ten fazla sabitlenmiş
-    /// öğe varsa ya da özellik kapalıysa) nil.
+    /// Atanmış kısayolun etiketi, ör. "⌘⇧1". Slot atanmamışsa ya da özellik
+    /// kapalıysa nil.
     var shortcut: String?
+    /// Kısayol atama menüsü. Yalnızca sabitlenmiş öğelerde ve özellik açıkken dolu.
+    var slotMenu: SlotMenu?
 
     let onCopy: () -> Void
     let onTogglePin: () -> Void
@@ -106,6 +108,10 @@ struct ClipRowView: View {
     /// ağacında duruyor.
     private var actions: some View {
         HStack(spacing: 8) {
+            if let slotMenu {
+                SlotMenuButton(menu: slotMenu, revealed: isHovering || item.slot != nil)
+            }
+
             IconButton(systemName: "pin.fill",
                        revealed: isHovering || item.isPinned,
                        tint: item.isPinned ? Theme.pin : Theme.text,
@@ -187,5 +193,66 @@ struct IconButton: View {
         .accessibilityLabel(help)
         .animation(.easeOut(duration: 0.2), value: isHovering)
         .animation(.easeOut(duration: 0.2), value: revealed)
+    }
+}
+
+
+/// Bir kartın kısayol atama menüsünün ihtiyaç duyduğu her şey.
+struct SlotMenu {
+    /// Öğeye şu an atalı slot (1-5), yoksa nil.
+    let current: Int?
+    /// Slot -> gösterilecek kısayol etiketi, ör. 1 -> "⌘⇧1".
+    let label: (Int) -> String
+    /// Slot başka bir öğedeyse onun kısa açıklaması, boşsa nil.
+    let occupant: (Int) -> String?
+    let assign: (Int) -> Void
+    let clear: () -> Void
+}
+
+/// `.action-button` görünümünde bir menü düğmesi: 1-5 arası slotlardan birini
+/// seçtirir. Dolu slotlar işaretleniyor — seçince devralınacağı sürpriz olmasın.
+struct SlotMenuButton: View {
+    let menu: SlotMenu
+    var revealed: Bool
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Menu {
+            ForEach(Array(HistoryStore.slots), id: \.self) { slot in
+                Button {
+                    menu.assign(slot)
+                } label: {
+                    Text(title(for: slot))
+                }
+            }
+
+            if menu.current != nil {
+                Divider()
+                Button("Kısayolu Kaldır", role: .destructive) { menu.clear() }
+            }
+        } label: {
+            Image(systemName: "keyboard")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(menu.current != nil ? Theme.pin : Theme.text)
+                .padding(4)
+                .background(isHovering ? Theme.cardBackgroundHover : Theme.cardBackground,
+                            in: RoundedRectangle(cornerRadius: 6))
+                .opacity(revealed ? 1 : 0)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .onHover { isHovering = $0 }
+        .help("Kısayol Ata")
+        .accessibilityLabel("Kısayol Ata")
+        .animation(.easeOut(duration: 0.2), value: revealed)
+    }
+
+    private func title(for slot: Int) -> String {
+        let key = menu.label(slot)
+        if menu.current == slot { return "✓ \(key)" }
+        if let occupant = menu.occupant(slot) { return "\(key) — \(occupant)" }
+        return key
     }
 }

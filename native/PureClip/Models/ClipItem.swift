@@ -16,10 +16,11 @@ struct ClipItem: Identifiable, Hashable {
     /// Electron sürümündeki `WHERE content = ?` tam taramasının yerini alıyor.
     let hash: String
     var isPinned: Bool
-    /// Ne zaman sabitlendiği. Kısayol slotları (⌘⇧1-5) bu sıraya göre dağıtılıyor:
-    /// ilk sabitlenen 1 numara olur ve yeni sabitlemeler sona eklenir, böylece
-    /// mevcut slotlar kaymaz. Yakalanma zamanına göre sıralamak bunu bozuyordu.
+    /// Ne zaman sabitlendiği — sabitlenmiş öğelerin kendi aralarındaki sırası.
     let pinnedAt: Date?
+    /// Kullanıcının bu öğeye atadığı kısayol slotu (1-5), atanmadıysa nil.
+    /// Sabitleme kaldırılınca temizleniyor.
+    let slot: Int?
     let createdAt: Date
 
     var previewText: String {

@@ -92,21 +92,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         pinnedHotKeys = KeyCode.digits.enumerated().compactMap { index, keyCode in
             HotKey(keyCode: keyCode, modifiers: config.modifier.carbonMask) { [weak self] in
-                self?.pastePinnedSlot(index)
+                self?.pastePinnedSlot(index + 1)   // slotlar 1 tabanlı
             }
         }
     }
 
     /// Slot kısayolu: panel açıksa normal yol (kapat, odağı iade et, yapıştır),
     /// kapalıysa öndeki uygulama zaten hedef olduğu için doğrudan yapıştır.
-    private func pastePinnedSlot(_ index: Int) {
-        let slots = store.pinnedSlots
-        guard index < slots.count else {
-            NSSound.beep()   // o slotta sabitlenmiş öğe yok
+    private func pastePinnedSlot(_ slot: Int) {
+        guard let item = store.item(inSlot: slot) else {
+            NSSound.beep()   // bu slota bir öğe atanmamış
             return
         }
 
-        let item = slots[index]
         if panel.isVisible {
             store.paste(item)
         } else {

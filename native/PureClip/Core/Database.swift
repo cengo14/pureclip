@@ -16,6 +16,10 @@ final class Database {
 
         try exec("PRAGMA journal_mode = WAL;")
         try exec("PRAGMA synchronous = NORMAL;")
+        // Sıra önemli: önce tablo, sonra sütun göçleri, en sonra indeksler.
+        // Benzersiz slot indeksi `slot` sütununa dayandığı için göçten önce
+        // oluşturulamaz — denenirse sqlite3_exec hata verir ve uygulama açılışta
+        // düşer (bu sırayla bir kez yaşandı).
         try exec("""
             CREATE TABLE IF NOT EXISTS clips (
                 id          TEXT PRIMARY KEY,
@@ -25,23 +29,30 @@ final class Database {
                 hash        TEXT NOT NULL,
                 pinned      INTEGER NOT NULL DEFAULT 0,
                 pinned_at   REAL,
+                slot        INTEGER,
                 created_at  REAL NOT NULL
             );
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_clips_hash  ON clips(hash);
-            CREATE INDEX        IF NOT EXISTS idx_clips_order ON clips(pinned DESC, pinned_at ASC, created_at DESC);
             """)
 
         migrate()
+
+        try exec("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_clips_hash  ON clips(hash);
+            CREATE INDEX        IF NOT EXISTS idx_clips_order ON clips(pinned DESC, pinned_at ASC, created_at DESC);
+            -- Bir slot aynı anda tek öğede olabilir; kısmi indeks bunu veritabanı
+            -- düzeyinde garanti ediyor (NULL'lar kısıtlamanın dışında).
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_clips_slot  ON clips(slot) WHERE slot IS NOT NULL;
+            """)
     }
 
     /// Şema göçleri. SQLite'ta "varsa ekleme" yok; sütun zaten varsa ALTER hata
     /// verir, bu beklenen durum olduğu için yutuluyor.
     private func migrate() {
         if (try? exec("ALTER TABLE clips ADD COLUMN pinned_at REAL;")) != nil {
-            // Yeni sütun: mevcut sabitlenmiş kayıtlara bir sıra ver, yoksa hepsi
-            // NULL kalır ve slot dağıtımı rastgele olur.
+            // Yeni sütun: mevcut sabitlenmiş kayıtlara bir sıra ver.
             try? exec("UPDATE clips SET pinned_at = created_at WHERE pinned = 1 AND pinned_at IS NULL;")
         }
+        try? exec("ALTER TABLE clips ADD COLUMN slot INTEGER;")
     }
 
     deinit {
@@ -70,8 +81,10 @@ final class Database {
     /// dosya adı döner — büyük içerik hiçbir zaman belleğe alınmaz.
     func fetchAll(limit: Int) -> [ClipItem] {
         let sql = """
-            SELECT id, kind, text, image_file, hash, pinned, pinned_at, created_at
-            FROM clips ORDER BY pinned DESC, pinned_at ASC, created_at DESC LIMIT ?;
+            SELECT id, kind, text, image_file, hash, pinned, pinned_at, slot, created_at
+            FROM clips
+            ORDER BY pinned DESC, (slot IS NULL), slot ASC, pinned_at ASC, created_at DESC
+            LIMIT ?;
             """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -91,7 +104,10 @@ final class Database {
                 pinnedAt: sqlite3_column_type(stmt, 6) == SQLITE_NULL
                     ? nil
                     : Date(timeIntervalSince1970: sqlite3_column_double(stmt, 6)),
-                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 7))
+                slot: sqlite3_column_type(stmt, 7) == SQLITE_NULL
+                    ? nil
+                    : Int(sqlite3_column_int(stmt, 7)),
+                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 8))
             ))
         }
         return items
@@ -150,17 +166,38 @@ final class Database {
         }
     }
 
-    /// Sabitlerken `pinned_at` damgalanıyor, kaldırırken temizleniyor — kısayol
-    /// slotlarının sırası buna bağlı.
+    /// Sabitleme kaldırılırken atanmış kısayol da temizleniyor: sabitlenmemiş bir
+    /// öğenin kısayolu olması kullanıcı için anlamsız olurdu.
     func togglePin(id: String) {
         run("""
             UPDATE clips
-            SET pinned = 1 - pinned,
-                pinned_at = CASE WHEN pinned = 0 THEN ? ELSE NULL END
+            SET pinned    = 1 - pinned,
+                pinned_at = CASE WHEN pinned = 0 THEN ? ELSE NULL END,
+                slot      = CASE WHEN pinned = 0 THEN slot ELSE NULL END
             WHERE id = ?;
             """) { stmt in
             sqlite3_bind_double(stmt, 1, Date().timeIntervalSince1970)
             sqlite3_bind_text(stmt, 2, id, -1, Self.transient)
+        }
+    }
+
+    /// Slotu bu öğeye verir. Slot başkasındaysa ondan alınır — kullanıcı menüde
+    /// hangi slotun dolu olduğunu görüyor, dolayısıyla bu bilinçli bir devralma.
+    func assignSlot(_ slot: Int, to id: String) {
+        try? exec("BEGIN IMMEDIATE;")
+        run("UPDATE clips SET slot = NULL WHERE slot = ?;") { stmt in
+            sqlite3_bind_int(stmt, 1, Int32(slot))
+        }
+        run("UPDATE clips SET slot = ? WHERE id = ?;") { stmt in
+            sqlite3_bind_int(stmt, 1, Int32(slot))
+            sqlite3_bind_text(stmt, 2, id, -1, Self.transient)
+        }
+        try? exec("COMMIT;")
+    }
+
+    func clearSlot(id: String) {
+        run("UPDATE clips SET slot = NULL WHERE id = ?;") { stmt in
+            sqlite3_bind_text(stmt, 1, id, -1, Self.transient)
         }
     }
 
