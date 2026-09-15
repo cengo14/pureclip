@@ -195,6 +195,14 @@ final class Database {
         try? exec("COMMIT;")
     }
 
+    /// Öğenin zaman damgasını tazeler — yeniden kopyalanmış sayılsın diye.
+    func touch(id: String, at date: Date = Date()) {
+        run("UPDATE clips SET created_at = ? WHERE id = ?;") { stmt in
+            sqlite3_bind_double(stmt, 1, date.timeIntervalSince1970)
+            sqlite3_bind_text(stmt, 2, id, -1, Self.transient)
+        }
+    }
+
     func clearSlot(id: String) {
         run("UPDATE clips SET slot = NULL WHERE id = ?;") { stmt in
             sqlite3_bind_text(stmt, 1, id, -1, Self.transient)

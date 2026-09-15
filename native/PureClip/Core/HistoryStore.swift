@@ -207,6 +207,14 @@ final class HistoryStore {
         }
 
         monitor.acknowledgeSelfWrite()
+
+        // Kullanılan öğe yeniden kopyalanmış sayılıyor: zaman damgası tazeleniyor,
+        // böylece listede sabitlenmişlerin hemen ardına, en başa geliyor.
+        // Panoya kendimiz yazdığımız için izleyici bunu yakalamıyor; damgayı
+        // burada elle atmazsak öğe bulunduğu yerde kalırdı.
+        db.touch(id: item.id)
+        reload()
+
         if AppSettings.soundEnabled { Sound.captured.play() }
     }
 

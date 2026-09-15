@@ -26,18 +26,16 @@ struct ClipRowView: View {
         // görsellerde ise hiç boşluk yoktu — ikonlar içeriğin üstüne biniyordu.
         // Artık kendi sütunlarında: yerleşimin parçası oldukları için binmeleri
         // mümkün değil.
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 0) {
-                content
-                // Kart yüksekliğini ikon sütunu belirlediğinde kısa metinlerde
-                // altta boşluk kalıyor ve saat havada duruyordu; Spacer zaman
-                // göstergesini her zaman sol alta sabitliyor.
-                Spacer(minLength: 10)
-                footer
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-
-            actions
+        // Eylem ikonları alt satırda, zaman göstergesinin yanında.
+        //
+        // Önce içeriğin üzerine bindiriliyorlardı (uzun metin ve görsellerde
+        // içerikle karışıyordu), sonra sağda dikey sütuna alındılar — bu sefer de
+        // kartın minimum yüksekliğini ~140 pt'ye çıkarıp panelde görünen öğe
+        // sayısını düşürdüler. Alt satır zaten var olduğu için burada ne binme
+        // oluyor ne de ek yükseklik.
+        VStack(alignment: .leading, spacing: 0) {
+            content
+            footer
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -108,15 +106,14 @@ struct ClipRowView: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: 8) {
             Label {
                 Text(timestampText)
             } icon: {
                 Image(systemName: item.kind == .text ? "clock" : "photo")
             }
             .labelStyle(.titleAndIcon)
-
-            Spacer()
+            .fixedSize()
 
             if let shortcut {
                 // Rozet, hangi öğenin hangi tuşta olduğunu bakar bakmaz gösteriyor.
@@ -126,7 +123,12 @@ struct ClipRowView: View {
                     .padding(.vertical, 2)
                     .background(Theme.pin.opacity(0.18), in: Capsule())
                     .foregroundStyle(Theme.pin)
+                    .fixedSize()
             }
+
+            Spacer(minLength: 4)
+
+            actions
         }
         .font(.system(size: 10))
         .foregroundStyle(Theme.textSecondary)
@@ -138,10 +140,10 @@ struct ClipRowView: View {
     /// tamamına değil içeriğine uygulanıyor: sabitlenmiş öğelerde pin düğmesi
     /// hover olmadan da görünür kalıyor ve her iki düğme de erişilebilirlik
     /// ağacında duruyor.
-    /// Sağdaki dikey eylem sütunu. Düğmeler hover'da beliriyor ama yerleri her
-    /// zaman ayrılı: göründüklerinde içerik yeniden akmıyor.
+    /// Alt satırın sağındaki eylem düğmeleri. Hover'da beliriyorlar ama yerleri
+    /// her zaman ayrılı, göründüklerinde satır yeniden akmıyor.
     private var actions: some View {
-        VStack(spacing: 6) {
+        HStack(spacing: 6) {
             IconButton(systemName: "doc.on.doc",
                        revealed: isHovering,
                        tint: Theme.text,
@@ -252,53 +254,82 @@ struct SlotMenu {
     let clear: () -> Void
 }
 
-/// `.action-button` görünümünde bir menü düğmesi: 1-5 arası slotlardan birini
-/// seçtirir. Dolu slotlar işaretleniyor — seçince devralınacağı sürpriz olmasın.
+/// Kısayol atama düğmesi.
+///
+/// SwiftUI `Menu` kendi ölçüsünü ve iç yerleşimini dayatıyor: kutusu diğer
+/// düğmelerden geniş/basık çıkıyor ve simge ortalanmıyordu — ayrıca `label`
+/// bloğuna verilen .background/.opacity yok sayılıyordu. Bu yüzden düğme gerçek
+/// bir `IconButton`, menü ise AppKit'in `NSMenu`'sü. Görünüm diğer düğmelerle
+/// birebir aynı, menü de sistemin kendi menüsü (işaretli öğe, ayırıcı, klavye
+/// gezinme hepsi bedava).
 struct SlotMenuButton: View {
     let menu: SlotMenu
     var revealed: Bool
 
-    @State private var isHovering = false
+    @State private var anchor = MenuAnchor()
 
     var body: some View {
-        Menu {
-            ForEach(Array(HistoryStore.slots), id: \.self) { slot in
-                Button {
-                    menu.assign(slot)
-                } label: {
-                    Text(title(for: slot))
-                }
-            }
-
-            if menu.current != nil {
-                Divider()
-                Button("Kısayolu Kaldır", role: .destructive) { menu.clear() }
-            }
-        } label: {
-            // Yalnızca simge. Arka plan ve saydamlık Menu'nün kendisine uygulanıyor:
-            // `label` bloğuna verilenleri SwiftUI yok sayıyor.
-            Image(systemName: "keyboard")
-                .font(.system(size: 13, weight: .medium))
+        IconButton(systemName: "keyboard",
+                   revealed: revealed,
+                   tint: menu.current != nil ? Theme.pin : Theme.text,
+                   help: "Kısayol Ata") {
+            anchor.present(menu)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        // Menu kendi ölçüsünü aldığında kutu diğer düğmelerden farklı (daha geniş
-        // ve basık) çıkıyordu. IconButton'ın kutusu: çerçeve (14+2) + padding 4 = 24.
-        .frame(width: 24, height: 24)
-        .foregroundStyle(menu.current != nil ? Theme.pin : Theme.text)
-        .background(isHovering ? Theme.cardBackgroundHover : Theme.cardBackground,
-                    in: RoundedRectangle(cornerRadius: 6))
-        .opacity(revealed ? 1 : 0)
-        .onHover { isHovering = $0 }
-        .help("Kısayol Ata")
-        .accessibilityLabel("Kısayol Ata")
-        .animation(.easeOut(duration: 0.2), value: revealed)
+        .background(MenuAnchorView(anchor: anchor))
+    }
+}
+
+/// Menünün altından açılacağı görünümü tutar.
+final class MenuAnchor {
+    weak var view: NSView?
+
+    func present(_ model: SlotMenu) {
+        guard let view else { return }
+
+        let nsMenu = NSMenu()
+        for slot in HistoryStore.slots {
+            let key = model.label(slot)
+            let title = model.occupant(slot).map { "\(key) — \($0)" } ?? key
+            let item = ClosureMenuItem(title: title) { model.assign(slot) }
+            // Atalı slot sistemin kendi onay işaretiyle gösteriliyor.
+            item.state = model.current == slot ? .on : .off
+            nsMenu.addItem(item)
+        }
+
+        if model.current != nil {
+            nsMenu.addItem(.separator())
+            nsMenu.addItem(ClosureMenuItem(title: "Kısayolu Kaldır") { model.clear() })
+        }
+
+        nsMenu.popUp(positioning: nil,
+                     at: NSPoint(x: 0, y: view.bounds.height + 4),
+                     in: view)
+    }
+}
+
+/// Kapanış tutan menü öğesi — NSMenuItem hedef/eylem ikilisi yerine.
+final class ClosureMenuItem: NSMenuItem {
+    private let handler: () -> Void
+
+    init(title: String, handler: @escaping () -> Void) {
+        self.handler = handler
+        super.init(title: title, action: #selector(fire), keyEquivalent: "")
+        target = self
     }
 
-    private func title(for slot: Int) -> String {
-        let key = menu.label(slot)
-        if menu.current == slot { return "✓ \(key)" }
-        if let occupant = menu.occupant(slot) { return "\(key) — \(occupant)" }
-        return key
+    required init(coder: NSCoder) { fatalError("init(coder:) kullanılmıyor") }
+
+    @objc private func fire() { handler() }
+}
+
+private struct MenuAnchorView: NSViewRepresentable {
+    let anchor: MenuAnchor
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        anchor.view = view
+        return view
     }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
