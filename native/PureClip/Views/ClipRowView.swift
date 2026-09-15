@@ -29,9 +29,13 @@ struct ClipRowView: View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 0) {
                 content
+                // Kart yüksekliğini ikon sütunu belirlediğinde kısa metinlerde
+                // altta boşluk kalıyor ve saat havada duruyordu; Spacer zaman
+                // göstergesini her zaman sol alta sabitliyor.
+                Spacer(minLength: 10)
                 footer
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
 
             actions
         }
@@ -82,10 +86,31 @@ struct ClipRowView: View {
         }
     }
 
+    /// Bugünse yalnızca saat, dünse "Dün 13:55", bu yıl içindeyse "14 Eyl 13:55",
+    /// daha eskiyse "14 Eyl 2025".
+    ///
+    /// Eskiden her kayıtta yalnızca saat yazıyordu: dünkü bir kayıtla bugünkünü
+    /// ayırt etmek mümkün değildi.
+    private var timestampText: String {
+        let calendar = Calendar.current
+        let date = item.createdAt
+
+        if calendar.isDateInToday(date) {
+            return date.formatted(.dateTime.hour().minute())
+        }
+        if calendar.isDateInYesterday(date) {
+            return "Dün " + date.formatted(.dateTime.hour().minute())
+        }
+        if calendar.isDate(date, equalTo: .now, toGranularity: .year) {
+            return date.formatted(.dateTime.day().month(.abbreviated).hour().minute())
+        }
+        return date.formatted(.dateTime.day().month(.abbreviated).year())
+    }
+
     private var footer: some View {
         HStack {
             Label {
-                Text(item.createdAt, format: .dateTime.hour().minute())
+                Text(timestampText)
             } icon: {
                 Image(systemName: item.kind == .text ? "clock" : "photo")
             }
@@ -100,10 +125,6 @@ struct ClipRowView: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Theme.pin.opacity(0.18), in: Capsule())
-                    .foregroundStyle(Theme.pin)
-            } else if item.isPinned {
-                Text("Sabitlendi")
-                    .fontWeight(.semibold)
                     .foregroundStyle(Theme.pin)
             }
         }
@@ -254,18 +275,16 @@ struct SlotMenuButton: View {
                 Button("Kısayolu Kaldır", role: .destructive) { menu.clear() }
             }
         } label: {
-            // Yalnızca simge; arka plan ve saydamlık aşağıda, Menu'nün kendisine
-            // uygulanıyor. `label` bloğuna verilen .background/.opacity SwiftUI
-            // tarafından yok sayılıyordu — düğme diğerlerinden farklı, arka
-            // plansız görünüyordu.
+            // Yalnızca simge. Arka plan ve saydamlık Menu'nün kendisine uygulanıyor:
+            // `label` bloğuna verilenleri SwiftUI yok sayıyor.
             Image(systemName: "keyboard")
                 .font(.system(size: 13, weight: .medium))
-                .frame(width: 16, height: 16)   // kart eylem düğmeleriyle aynı kutu
-                .padding(4)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .fixedSize()
+        // Menu kendi ölçüsünü aldığında kutu diğer düğmelerden farklı (daha geniş
+        // ve basık) çıkıyordu. IconButton'ın kutusu: çerçeve (14+2) + padding 4 = 24.
+        .frame(width: 24, height: 24)
         .foregroundStyle(menu.current != nil ? Theme.pin : Theme.text)
         .background(isHovering ? Theme.cardBackgroundHover : Theme.cardBackground,
                     in: RoundedRectangle(cornerRadius: 6))
