@@ -249,7 +249,7 @@ struct SettingsView: View {
                 }
                 .font(.system(size: 12, weight: .medium))
                 .onTapGesture {
-                    NSWorkspace.shared.open(URL(string: "https://www.cengodev.com")!)
+                    NSWorkspace.shared.open(URL(string: "https://github.com/cengo14")!)
                 }
 
                 Text("Designed for macOS")
