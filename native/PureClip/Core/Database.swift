@@ -24,11 +24,24 @@ final class Database {
                 image_file  TEXT,
                 hash        TEXT NOT NULL,
                 pinned      INTEGER NOT NULL DEFAULT 0,
+                pinned_at   REAL,
                 created_at  REAL NOT NULL
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_clips_hash  ON clips(hash);
-            CREATE INDEX        IF NOT EXISTS idx_clips_order ON clips(pinned DESC, created_at DESC);
+            CREATE INDEX        IF NOT EXISTS idx_clips_order ON clips(pinned DESC, pinned_at ASC, created_at DESC);
             """)
+
+        migrate()
+    }
+
+    /// Şema göçleri. SQLite'ta "varsa ekleme" yok; sütun zaten varsa ALTER hata
+    /// verir, bu beklenen durum olduğu için yutuluyor.
+    private func migrate() {
+        if (try? exec("ALTER TABLE clips ADD COLUMN pinned_at REAL;")) != nil {
+            // Yeni sütun: mevcut sabitlenmiş kayıtlara bir sıra ver, yoksa hepsi
+            // NULL kalır ve slot dağıtımı rastgele olur.
+            try? exec("UPDATE clips SET pinned_at = created_at WHERE pinned = 1 AND pinned_at IS NULL;")
+        }
     }
 
     deinit {
@@ -57,8 +70,8 @@ final class Database {
     /// dosya adı döner — büyük içerik hiçbir zaman belleğe alınmaz.
     func fetchAll(limit: Int) -> [ClipItem] {
         let sql = """
-            SELECT id, kind, text, image_file, hash, pinned, created_at
-            FROM clips ORDER BY pinned DESC, created_at DESC LIMIT ?;
+            SELECT id, kind, text, image_file, hash, pinned, pinned_at, created_at
+            FROM clips ORDER BY pinned DESC, pinned_at ASC, created_at DESC LIMIT ?;
             """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -75,7 +88,10 @@ final class Database {
                 imageFile: column(stmt, 3),
                 hash: column(stmt, 4) ?? "",
                 isPinned: sqlite3_column_int(stmt, 5) == 1,
-                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 6))
+                pinnedAt: sqlite3_column_type(stmt, 6) == SQLITE_NULL
+                    ? nil
+                    : Date(timeIntervalSince1970: sqlite3_column_double(stmt, 6)),
+                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 7))
             ))
         }
         return items
@@ -134,9 +150,17 @@ final class Database {
         }
     }
 
+    /// Sabitlerken `pinned_at` damgalanıyor, kaldırırken temizleniyor — kısayol
+    /// slotlarının sırası buna bağlı.
     func togglePin(id: String) {
-        run("UPDATE clips SET pinned = 1 - pinned WHERE id = ?;") { stmt in
-            sqlite3_bind_text(stmt, 1, id, -1, Self.transient)
+        run("""
+            UPDATE clips
+            SET pinned = 1 - pinned,
+                pinned_at = CASE WHEN pinned = 0 THEN ? ELSE NULL END
+            WHERE id = ?;
+            """) { stmt in
+            sqlite3_bind_double(stmt, 1, Date().timeIntervalSince1970)
+            sqlite3_bind_text(stmt, 2, id, -1, Self.transient)
         }
     }
 

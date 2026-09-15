@@ -88,6 +88,7 @@ final class HistoryStore {
                 imageFile: nil,
                 hash: Self.hash(of: Data(text.utf8)),
                 isPinned: false,
+                pinnedAt: nil,
                 createdAt: Date()
             )
 
@@ -100,6 +101,7 @@ final class HistoryStore {
                 imageFile: saved.fileName,
                 hash: saved.hash,
                 isPinned: false,
+                pinnedAt: nil,
                 createdAt: Date()
             )
         }
@@ -122,6 +124,7 @@ final class HistoryStore {
             imageFile: saved.fileName,
             hash: saved.hash,
             isPinned: false,
+            pinnedAt: nil,
             createdAt: Date()
         ))
 
@@ -143,6 +146,26 @@ final class HistoryStore {
         }
 
         reload()
+    }
+
+    /// Kısayol slotlarına (⌘⇧1-5) karşılık gelen sabitlenmiş öğeler.
+    ///
+    /// Sıralama sabitlenme zamanına göre; paneldeki görünüm sırasından bağımsız.
+    /// Kullanıcı listeyi A-Z sıralarsa ekrandaki dizilim değişir ama slotlar
+    /// yerinde kalır — kısayolun tek anlamı kas hafızası olduğu için bu şart.
+    var pinnedSlots: [ClipItem] {
+        items
+            .filter(\.isPinned)
+            .sorted { ($0.pinnedAt ?? $0.createdAt) < ($1.pinnedAt ?? $1.createdAt) }
+            .prefix(HistoryStore.slotCount)
+            .map { $0 }
+    }
+
+    static let slotCount = 5
+
+    /// Verilen öğenin slot numarası (1 tabanlı), yoksa nil.
+    func slot(of item: ClipItem) -> Int? {
+        pinnedSlots.firstIndex(where: { $0.id == item.id }).map { $0 + 1 }
     }
 
     // MARK: - Kullanıcı eylemleri
@@ -188,6 +211,22 @@ final class HistoryStore {
     /// Kullanıcı bir öğeye tıkladığında: panoya yaz, paneli kapat, öndeki uygulamaya
     /// ⌘V gönder.
     ///
+    /// Panel açık değilken (kısayol slotları) kullanılır: öndeki uygulama zaten
+    /// hedef olduğu için paneli kapatmaya ya da odağı iade etmeye gerek yok.
+    func pasteDirectly(_ item: ClipItem) {
+        copyToPasteboard(item)
+
+        guard AppSettings.autoPaste else { return }
+        guard Paster.isTrusted else {
+            requestAccessibilityOnce()
+            return
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            Paster.sendCommandV()
+        }
+    }
+
     /// `onRequestHide` paneli kapatıp odağı panel açılmadan önceki uygulamaya
     /// iade eder; ⌘V o uygulama öne geldikten sonra gönderilir. Electron sürümü
     /// hedefi bilmediği için `app.hide()` deyip 500 ms tahminî bekliyordu.
@@ -198,19 +237,23 @@ final class HistoryStore {
         guard AppSettings.autoPaste else { return }
 
         guard Paster.isTrusted else {
-            // Kullanıcı yapıştırma bekliyor ama izin yok. Ayarlarda düğme aramak
-            // yerine sistemin izin dialogunu tam ihtiyaç duyulduğu anda gösteriyoruz.
-            if !didRequestAccessibility {
-                didRequestAccessibility = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    Paster.requestTrust()
-                }
-            }
+            requestAccessibilityOnce()
             return
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             Paster.sendCommandV()
+        }
+    }
+
+    /// Kullanıcı yapıştırma bekliyor ama izin yok. Ayarlarda düğme aramak yerine
+    /// sistemin izin dialogunu tam ihtiyaç duyulduğu anda gösteriyoruz; oturum
+    /// başına bir kez, her tıklamada tekrarlamasın.
+    private func requestAccessibilityOnce() {
+        guard !didRequestAccessibility else { return }
+        didRequestAccessibility = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            Paster.requestTrust()
         }
     }
 

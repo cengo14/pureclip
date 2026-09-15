@@ -5,6 +5,9 @@ import SwiftUI
 struct ClipRowView: View {
     let item: ClipItem
     let thumbnail: NSImage?
+    /// Sabitlenmiş öğenin kısayolu, ör. "⌘⇧1". Slot yoksa (5'ten fazla sabitlenmiş
+    /// öğe varsa ya da özellik kapalıysa) nil.
+    var shortcut: String?
 
     let onCopy: () -> Void
     let onTogglePin: () -> Void
@@ -77,7 +80,15 @@ struct ClipRowView: View {
 
             Spacer()
 
-            if item.isPinned {
+            if let shortcut {
+                // Rozet, hangi öğenin hangi tuşta olduğunu bakar bakmaz gösteriyor.
+                Text(shortcut)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Theme.pin.opacity(0.18), in: Capsule())
+                    .foregroundStyle(Theme.pin)
+            } else if item.isPinned {
                 Text("Sabitlendi")
                     .fontWeight(.semibold)
                     .foregroundStyle(Theme.pin)

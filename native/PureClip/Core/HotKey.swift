@@ -61,6 +61,12 @@ final class HotKey {
 /// Carbon sanal tuş kodları — Carbon import'u bu dosyada kalsın diye burada sarmalanıyor.
 enum KeyCode {
     static let v = UInt32(kVK_ANSI_V)
+
+    /// 1-5 tuşları — sabitlenmiş öğe slotları için.
+    static let digits: [UInt32] = [
+        UInt32(kVK_ANSI_1), UInt32(kVK_ANSI_2), UInt32(kVK_ANSI_3),
+        UInt32(kVK_ANSI_4), UInt32(kVK_ANSI_5)
+    ]
 }
 
 enum KeyModifier {

@@ -5,6 +5,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var panel: ClipPanel!
     private var hotKey: HotKey?
+    /// Sabitlenmiş öğe slotları (⌘⇧1-5). Ayar değişince yeniden kaydediliyor.
+    private var pinnedHotKeys: [HotKey] = []
+    private var registeredPinnedConfig: (enabled: Bool, modifier: PinnedShortcutModifier)?
     private var store: HistoryStore!
 
     /// Panel açılmadan hemen önceki öndeki uygulama. Yapıştırmadan önce odağı
@@ -30,10 +33,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setUpPanel()
         store.start()
 
+        registerPinnedHotKeys()
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(applicationDidResignActive),
             name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
+
+        // Ayarlar penceresinde kısayol tercihi değişince kayıtları tazele.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(settingsDidChange),
+            name: UserDefaults.didChangeNotification,
             object: nil
         )
 
@@ -52,6 +65,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         store?.shutdown()
+    }
+
+    @objc private func settingsDidChange() {
+        registerPinnedHotKeys()
+    }
+
+    /// Sabitlenmiş öğe kısayollarını (değiştirici + 1-5) kaydeder.
+    ///
+    /// Carbon kısayolları `HotKey` serbest bırakılınca çözülüyor, bu yüzden önce
+    /// dizi boşaltılıyor. Ayar değişmediyse hiçbir şey yapılmıyor: bu metot her
+    /// UserDefaults değişiminde çağrılıyor ve gereksiz yeniden kayıt, kullanıcı
+    /// tuşa basmışken kısayolu kısa süreliğine ölü bırakabilir.
+    private func registerPinnedHotKeys() {
+        let config = (enabled: AppSettings.pinnedShortcutsEnabled,
+                      modifier: AppSettings.pinnedShortcutModifier)
+
+        if let current = registeredPinnedConfig,
+           current.enabled == config.enabled, current.modifier == config.modifier {
+            return
+        }
+        registeredPinnedConfig = config
+
+        pinnedHotKeys.removeAll()
+        guard config.enabled else { return }
+
+        pinnedHotKeys = KeyCode.digits.enumerated().compactMap { index, keyCode in
+            HotKey(keyCode: keyCode, modifiers: config.modifier.carbonMask) { [weak self] in
+                self?.pastePinnedSlot(index)
+            }
+        }
+    }
+
+    /// Slot kısayolu: panel açıksa normal yol (kapat, odağı iade et, yapıştır),
+    /// kapalıysa öndeki uygulama zaten hedef olduğu için doğrudan yapıştır.
+    private func pastePinnedSlot(_ index: Int) {
+        let slots = store.pinnedSlots
+        guard index < slots.count else {
+            NSSound.beep()   // o slotta sabitlenmiş öğe yok
+            return
+        }
+
+        let item = slots[index]
+        if panel.isVisible {
+            store.paste(item)
+        } else {
+            store.pasteDirectly(item)
+        }
     }
 
     /// Uygulama aktifliğini kaybettiğinde panel kapanır: kullanıcı başka bir
@@ -142,6 +202,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if frontmost?.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             previousApp = frontmost
         }
+
+        // Ayarlar panel içinde değiştiği için tercih değişikliği normalde
+        // UserDefaults bildirimiyle anında uygulanıyor. Panel her açılışta da
+        // yeniden senkronlanıyor: bildirim kaçarsa (ör. ayar başka bir süreçten
+        // değiştiyse) kısayollar en geç burada güncellenir. Yapılandırma
+        // değişmediyse metot erken dönüyor, maliyeti yok.
+        registerPinnedHotKeys()
 
         positionPanel()
 

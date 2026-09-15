@@ -12,6 +12,8 @@ enum SettingsKey {
     static let watchScreenshots = "watchScreenshots"
     static let deleteScreenshotAfterCapture = "deleteScreenshotAfterCapture"
     static let sortOrder = "sortOrder"
+    static let pinnedShortcutsEnabled = "pinnedShortcutsEnabled"
+    static let pinnedShortcutModifier = "pinnedShortcutModifier"
 }
 
 enum AppSettings {
@@ -26,7 +28,9 @@ enum AppSettings {
             SettingsKey.soundEnabled: true,
             SettingsKey.autoPaste: true,
             SettingsKey.watchScreenshots: true,
-            SettingsKey.deleteScreenshotAfterCapture: false
+            SettingsKey.deleteScreenshotAfterCapture: false,
+            SettingsKey.pinnedShortcutsEnabled: true,
+            SettingsKey.pinnedShortcutModifier: PinnedShortcutModifier.commandShift.rawValue
         ])
     }
 
@@ -38,5 +42,53 @@ enum AppSettings {
     static var watchScreenshots: Bool { UserDefaults.standard.bool(forKey: SettingsKey.watchScreenshots) }
     static var deleteScreenshotAfterCapture: Bool {
         UserDefaults.standard.bool(forKey: SettingsKey.deleteScreenshotAfterCapture)
+    }
+
+    static var pinnedShortcutsEnabled: Bool {
+        UserDefaults.standard.bool(forKey: SettingsKey.pinnedShortcutsEnabled)
+    }
+
+    static var pinnedShortcutModifier: PinnedShortcutModifier {
+        let raw = UserDefaults.standard.string(forKey: SettingsKey.pinnedShortcutModifier) ?? ""
+        return PinnedShortcutModifier(rawValue: raw) ?? .commandShift
+    }
+}
+
+/// Sabitlenmiş öğe kısayollarının değiştirici kombinasyonu.
+///
+/// Global kısayol kaydetmek o tuşları bütün uygulamalardan alır; ⌘⇧1-5 birçok
+/// uygulamada kullanıldığı için kullanıcının başka bir kombinasyona geçebilmesi
+/// gerekiyor. Rakamlar (1-5) sabit.
+enum PinnedShortcutModifier: String, CaseIterable, Identifiable {
+    case commandShift
+    case controlOption
+    case commandControl
+    case optionShift
+
+    var id: String { rawValue }
+
+    /// Carbon `RegisterEventHotKey` için değiştirici maskesi.
+    var carbonMask: UInt32 {
+        switch self {
+        case .commandShift:   return KeyModifier.command | KeyModifier.shift
+        case .controlOption:  return KeyModifier.control | KeyModifier.option
+        case .commandControl: return KeyModifier.command | KeyModifier.control
+        case .optionShift:    return KeyModifier.option | KeyModifier.shift
+        }
+    }
+
+    /// Arayüzde gösterilen simgeler, ör. "⌘⇧".
+    var symbols: String {
+        switch self {
+        case .commandShift:   return "⌘⇧"
+        case .controlOption:  return "⌃⌥"
+        case .commandControl: return "⌘⌃"
+        case .optionShift:    return "⌥⇧"
+        }
+    }
+
+    /// Belirli bir slot için tam kısayol metni, ör. "⌘⇧1".
+    func label(slot: Int) -> String {
+        "\(symbols)\(slot)"
     }
 }

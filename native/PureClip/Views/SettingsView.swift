@@ -11,6 +11,8 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.autoPaste) private var autoPaste = true
     @AppStorage(SettingsKey.watchScreenshots) private var watchScreenshots = true
     @AppStorage(SettingsKey.deleteScreenshotAfterCapture) private var deleteScreenshot = false
+    @AppStorage(SettingsKey.pinnedShortcutsEnabled) private var pinnedShortcutsEnabled = true
+    @AppStorage(SettingsKey.pinnedShortcutModifier) private var shortcutModifier = PinnedShortcutModifier.commandShift
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var isAccessible = Paster.isTrusted
@@ -37,6 +39,7 @@ struct SettingsView: View {
         ScrollView(.vertical) {
             VStack(spacing: 16) {
                 generalSection
+                shortcutSection
                 pasteSection
                 accessibilitySection
                 actionsSection
@@ -106,6 +109,29 @@ struct SettingsView: View {
                 .labelsHidden()
                 .controlSize(.small)
                 .fixedSize()
+            }
+        }
+    }
+
+    private var shortcutSection: some View {
+        SettingsSection {
+            SettingsRow(icon: "pin", title: "Sabitlenmiş Öğe Kısayolları",
+                        description: "İlk 5 sabitlenmiş öğeyi tuşla yapıştır") {
+                switchToggle($pinnedShortcutsEnabled)
+            }
+
+            if pinnedShortcutsEnabled {
+                SettingsRow(icon: "keyboard", title: "Değiştirici",
+                            description: "Başka bir uygulamayla çakışırsa değiştirin") {
+                    Picker("", selection: $shortcutModifier) {
+                        ForEach(PinnedShortcutModifier.allCases) { option in
+                            Text("\(option.symbols) 1-5").tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .fixedSize()
+                }
             }
         }
     }

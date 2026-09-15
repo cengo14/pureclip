@@ -7,6 +7,8 @@ struct RootView: View {
     @State private var filter: ClipFilter = .all
     /// Sıralama tercihi oturumlar arası korunuyor.
     @AppStorage(SettingsKey.sortOrder) private var sort: ClipSort = .newest
+    @AppStorage(SettingsKey.pinnedShortcutsEnabled) private var pinnedShortcutsEnabled = true
+    @AppStorage(SettingsKey.pinnedShortcutModifier) private var shortcutModifier = PinnedShortcutModifier.commandShift
     @State private var showingSettings = false
     @State private var pendingDeletion: ClipItem?
     @State private var confirmingClearAll = false
@@ -76,6 +78,12 @@ struct RootView: View {
             Button("Tümünü Temizle", role: .destructive) { store.clearUnpinned() }
             Button("Vazgeç", role: .cancel) {}
         }
+    }
+
+    /// Sabitlenmiş öğenin kısayol etiketi. Özellik kapalıysa rozet gösterilmiyor.
+    private func shortcutLabel(for item: ClipItem) -> String? {
+        guard pinnedShortcutsEnabled, let slot = store.slot(of: item) else { return nil }
+        return AppSettings.pinnedShortcutModifier.label(slot: slot)
     }
 
     // MARK: - Başlık
@@ -152,6 +160,7 @@ struct RootView: View {
                     ClipRowView(
                         item: item,
                         thumbnail: item.imageFile.flatMap { store.images.thumbnail(named: $0) },
+                        shortcut: shortcutLabel(for: item),
                         onCopy: { store.paste(item) },
                         onTogglePin: { store.togglePin(item) },
                         onDelete: { pendingDeletion = item }
