@@ -213,6 +213,14 @@ final class HistoryStore {
     /// Kullanıcı bir öğeye tıkladığında: panoya yaz, paneli kapat, öndeki uygulamaya
     /// ⌘V gönder.
     ///
+    /// Yalnızca panoya kopyalar ve paneli kapatır — yapıştırma yok. Otomatik
+    /// yapıştırma kapalıyken kullanıcının içeriği alıp kendi ⌘V'siyle yapıştırması
+    /// için; açıkken de "yapıştırmadan sadece kopyala" seçeneği olarak duruyor.
+    func copyOnly(_ item: ClipItem) {
+        copyToPasteboard(item)
+        onRequestHide?()
+    }
+
     /// Panel açık değilken (kısayol slotları) kullanılır: öndeki uygulama zaten
     /// hedef olduğu için paneli kapatmaya ya da odağı iade etmeye gerek yok.
     func pasteDirectly(_ item: ClipItem) {

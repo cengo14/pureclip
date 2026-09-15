@@ -192,6 +192,7 @@ struct RootView: View {
                         shortcut: shortcutLabel(for: item),
                         slotMenu: slotMenu(for: item),
                         onCopy: { store.paste(item) },
+                        onCopyOnly: { store.copyOnly(item) },
                         onTogglePin: { store.togglePin(item) },
                         onDelete: { pendingDeletion = item }
                     )

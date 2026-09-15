@@ -12,20 +12,32 @@ struct ClipRowView: View {
     var slotMenu: SlotMenu?
 
     let onCopy: () -> Void
+    /// Yalnızca panoya kopyalar, yapıştırmaz. Otomatik yapıştırma açıkken bile
+    /// "sadece kopyala" mümkün olsun diye ayrı bir eylem.
+    let onCopyOnly: () -> Void
     let onTogglePin: () -> Void
     let onDelete: () -> Void
 
     @State private var isHovering = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            content
-            footer
+        // İkonlar eskiden içeriğin üzerine bindiriliyordu (.overlay) ve metne
+        // sabit 45 pt sağ boşluk bırakılıyordu. Üçüncü düğme eklenince bu yetmedi,
+        // görsellerde ise hiç boşluk yoktu — ikonlar içeriğin üstüne biniyordu.
+        // Artık kendi sütunlarında: yerleşimin parçası oldukları için binmeleri
+        // mümkün değil.
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
+                content
+                footer
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            actions
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(background)
-        .overlay(alignment: .topTrailing) { actions }
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -48,7 +60,6 @@ struct ClipRowView: View {
                 .lineLimit(4)                    // -webkit-line-clamp: 4
                 .multilineTextAlignment(.leading)
                 .foregroundStyle(Theme.text)
-                .padding(.trailing, 45)          // eylem düğmelerine yer bırak
                 .frame(maxWidth: .infinity, alignment: .leading)
 
         case .image:
@@ -106,8 +117,16 @@ struct ClipRowView: View {
     /// tamamına değil içeriğine uygulanıyor: sabitlenmiş öğelerde pin düğmesi
     /// hover olmadan da görünür kalıyor ve her iki düğme de erişilebilirlik
     /// ağacında duruyor.
+    /// Sağdaki dikey eylem sütunu. Düğmeler hover'da beliriyor ama yerleri her
+    /// zaman ayrılı: göründüklerinde içerik yeniden akmıyor.
     private var actions: some View {
-        HStack(spacing: 8) {
+        VStack(spacing: 6) {
+            IconButton(systemName: "doc.on.doc",
+                       revealed: isHovering,
+                       tint: Theme.text,
+                       help: "Panoya Kopyala",
+                       action: onCopyOnly)
+
             if let slotMenu {
                 SlotMenuButton(menu: slotMenu, revealed: isHovering || item.slot != nil)
             }
@@ -126,7 +145,6 @@ struct ClipRowView: View {
                        help: "Sil",
                        action: onDelete)
         }
-        .padding(10)
     }
 
     @ViewBuilder
@@ -182,6 +200,10 @@ struct IconButton: View {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .medium))
                 .rotationEffect(.degrees(rotation))
+                // SF Symbols'te glif yükseklikleri değişiyor (ör. "keyboard"
+                // basık, "trash" uzun). Sabit çerçeve olmadan arka plan kutuları
+                // farklı boylarda çıkıyordu.
+                .frame(width: size + 2, height: size + 2)
                 .foregroundStyle(isHovering ? (hoverTint ?? tint) : tint)
                 .padding(padding)
                 .background(background, in: RoundedRectangle(cornerRadius: cornerRadius))
@@ -232,17 +254,22 @@ struct SlotMenuButton: View {
                 Button("Kısayolu Kaldır", role: .destructive) { menu.clear() }
             }
         } label: {
+            // Yalnızca simge; arka plan ve saydamlık aşağıda, Menu'nün kendisine
+            // uygulanıyor. `label` bloğuna verilen .background/.opacity SwiftUI
+            // tarafından yok sayılıyordu — düğme diğerlerinden farklı, arka
+            // plansız görünüyordu.
             Image(systemName: "keyboard")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(menu.current != nil ? Theme.pin : Theme.text)
+                .frame(width: 16, height: 16)   // kart eylem düğmeleriyle aynı kutu
                 .padding(4)
-                .background(isHovering ? Theme.cardBackgroundHover : Theme.cardBackground,
-                            in: RoundedRectangle(cornerRadius: 6))
-                .opacity(revealed ? 1 : 0)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
+        .foregroundStyle(menu.current != nil ? Theme.pin : Theme.text)
+        .background(isHovering ? Theme.cardBackgroundHover : Theme.cardBackground,
+                    in: RoundedRectangle(cornerRadius: 6))
+        .opacity(revealed ? 1 : 0)
         .onHover { isHovering = $0 }
         .help("Kısayol Ata")
         .accessibilityLabel("Kısayol Ata")
