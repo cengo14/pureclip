@@ -50,6 +50,12 @@ struct ClipRowView: View {
         .onTapGesture(perform: onCopy)
         .onHover { isHovering = $0 }
         .animation(.easeOut(duration: 0.25), value: isHovering)
+        // Görsel düğmeler hover'a göre gelip gittiği için eylemler ayrıca burada
+        // duruyor: ekran okuyucu ve klavye kullanıcıları için her zaman erişilebilir.
+        .accessibilityElement(children: .combine)
+        .accessibilityAction(named: "Panoya Kopyala", onCopyOnly)
+        .accessibilityAction(named: item.isPinned ? "Sabitlemeyi Kaldır" : "Sabitle", onTogglePin)
+        .accessibilityAction(named: "Sil", onDelete)
     }
 
     @ViewBuilder
@@ -140,34 +146,50 @@ struct ClipRowView: View {
     /// tamamına değil içeriğine uygulanıyor: sabitlenmiş öğelerde pin düğmesi
     /// hover olmadan da görünür kalıyor ve her iki düğme de erişilebilirlik
     /// ağacında duruyor.
-    /// Alt satırın sağındaki eylem düğmeleri. Hover'da beliriyorlar ama yerleri
-    /// her zaman ayrılı, göründüklerinde satır yeniden akmıyor.
+    /// Alt satırın sağındaki eylem düğmeleri.
+    ///
+    /// Boştayken yalnızca "etkin" olanlar duruyor (sabitliyse pin, kısayolu varsa
+    /// klavye) ve sağa dayalı; hover'da diğerleri açılıp bunlar kendi sıralarına
+    /// kayıyor. Gizli düğmelerin yerini ayırmak, tek başına duran pin simgesini
+    /// kartın ortasında bırakıyor ve sağ taraf boş görünüyordu.
+    ///
+    /// Düğmeler hiyerarşiden çıktığı için erişilebilirlikten de düşerler; bu
+    /// yüzden aynı eylemler karta `accessibilityAction` olarak bağlı ve hover'dan
+    /// bağımsız olarak her zaman erişilebilir.
     private var actions: some View {
         HStack(spacing: 6) {
-            IconButton(systemName: "doc.on.doc",
-                       revealed: isHovering,
-                       tint: Theme.text,
-                       help: "Panoya Kopyala",
-                       action: onCopyOnly)
-
-            if let slotMenu {
-                SlotMenuButton(menu: slotMenu, revealed: isHovering || item.slot != nil)
+            if isHovering {
+                IconButton(systemName: "doc.on.doc",
+                           tint: Theme.text,
+                           help: "Panoya Kopyala",
+                           action: onCopyOnly)
+                    .transition(.opacity)
             }
 
-            IconButton(systemName: "pin.fill",
-                       revealed: isHovering || item.isPinned,
-                       tint: item.isPinned ? Theme.pin : Theme.text,
-                       rotation: item.isPinned ? 0 : -45,
-                       help: item.isPinned ? "Sabitlemeyi Kaldır" : "Sabitle",
-                       action: onTogglePin)
+            if let slotMenu, isHovering || item.slot != nil {
+                SlotMenuButton(menu: slotMenu)
+                    .transition(.opacity)
+            }
 
-            IconButton(systemName: "trash",
-                       revealed: isHovering,
-                       tint: Theme.text,
-                       hoverTint: Theme.destructive,
-                       help: "Sil",
-                       action: onDelete)
+            if isHovering || item.isPinned {
+                IconButton(systemName: "pin.fill",
+                           tint: item.isPinned ? Theme.pin : Theme.text,
+                           rotation: item.isPinned ? 0 : -45,
+                           help: item.isPinned ? "Sabitlemeyi Kaldır" : "Sabitle",
+                           action: onTogglePin)
+                    .transition(.opacity)
+            }
+
+            if isHovering {
+                IconButton(systemName: "trash",
+                           tint: Theme.text,
+                           hoverTint: Theme.destructive,
+                           help: "Sil",
+                           action: onDelete)
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeOut(duration: 0.18), value: isHovering)
     }
 
     @ViewBuilder
@@ -264,13 +286,11 @@ struct SlotMenu {
 /// gezinme hepsi bedava).
 struct SlotMenuButton: View {
     let menu: SlotMenu
-    var revealed: Bool
 
     @State private var anchor = MenuAnchor()
 
     var body: some View {
         IconButton(systemName: "keyboard",
-                   revealed: revealed,
                    tint: menu.current != nil ? Theme.pin : Theme.text,
                    help: "Kısayol Ata") {
             anchor.present(menu)
